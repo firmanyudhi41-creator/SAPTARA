@@ -2,6 +2,7 @@ node_modules/
 dist/
 uploads/
 .env
+.env.production
 *.log
 
 # Created by https://www.toptal.com/developers/gitignore/api/node,react

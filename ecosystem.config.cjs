@@ -7,6 +7,12 @@ module.exports = {
       interpreter: "node",
       env: {
         NODE_ENV: "production",
+        PORT: 3000,
+        DATABASE_PATH: "./saptara.db",
+        BETTER_AUTH_SECRET: "saptara-secret-key-change-in-production",
+        BETTER_AUTH_URL: "https://d7ad3476-f9f6-433e-8580-bfcd2ac5ba64.svc.dalang.io",
+        JWT_SECRET: "saptara-student-jwt-secret-change-in-production",
+        UPLOAD_DIR: "./uploads",
       },
       // Restart settings
       instances: 1,
