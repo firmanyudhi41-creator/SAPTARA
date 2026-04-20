@@ -1,0 +1,53 @@
+module.exports = {
+  apps: [
+    {
+      name: "saptara-server",
+      cwd: "./server",
+      script: "dist/index.js",
+      interpreter: "node",
+      env: {
+        NODE_ENV: "production",
+      },
+      // Restart settings
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "256M",
+
+      // Logging
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      error_file: "./logs/server-error.log",
+      out_file: "./logs/server-out.log",
+      merge_logs: true,
+
+      // Graceful restart
+      kill_timeout: 5000,
+      listen_timeout: 8000,
+    },
+    {
+      name: "saptara-client",
+      cwd: "./client",
+      script: "node_modules/.bin/vite",
+      args: "preview --host 0.0.0.0 --port 4173",
+      interpreter: "node",
+      env: {
+        NODE_ENV: "production",
+      },
+      // Restart settings
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "256M",
+
+      // Logging
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      error_file: "./logs/client-error.log",
+      out_file: "./logs/client-out.log",
+      merge_logs: true,
+
+      // Graceful restart
+      kill_timeout: 5000,
+      listen_timeout: 8000,
+    },
+  ],
+};
