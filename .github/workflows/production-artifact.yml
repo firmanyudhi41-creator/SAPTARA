@@ -51,19 +51,26 @@ jobs:
           echo "RELEASE_NAME=saptara-production-${CLEAN_TAG}" >> $GITHUB_ENV
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+          run_install: false
+
       - name: Setup Node.js (Static Build)
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'npm'
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install NPM Dependencies
-        run: npm ci
+      - name: Install pnpm Dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build Static Frontend Assets (React + Tailwind via Vite)
         run: |
           echo "Mengompilasi aset aplikasi React menjadi bundle statis..."
-          npm run build
+          pnpm build
           
           # Verifikasi file manifest dan aset statis hasil kompilasi
           if [ ! -f "public/build/manifest.json" ]; then

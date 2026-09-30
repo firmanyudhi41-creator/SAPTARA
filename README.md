@@ -45,8 +45,8 @@ Jangan menimpa `.env` yang sudah digunakan. Lanjutkan dengan:
 ./vendor/bin/sail artisan config:clear
 ./vendor/bin/sail artisan migrate
 ./vendor/bin/sail artisan storage:link
-./vendor/bin/sail npm ci
-./vendor/bin/sail npm run dev
+./vendor/bin/sail pnpm install --frozen-lockfile
+./vendor/bin/sail pnpm dev
 ```
 
 Buka http://localhost:8000. Vite berjalan di port 5173 dan mendukung hot reload.
@@ -117,11 +117,12 @@ composer check-platform-reqs
 php artisan key:generate
 php artisan migrate
 php artisan storage:link
-npm ci
+corepack enable
+pnpm install --frozen-lockfile
 php artisan serve
 ```
 
-Pada terminal lain, jalankan `npm run dev` dan, jika diperlukan,
+Pada terminal lain, jalankan `pnpm dev` dan, jika diperlukan,
 `php artisan queue:work`. Buka http://localhost:8000.
 
 Saat berpindah dari Sail ke PHP lokal, hentikan Vite dan jalankan
