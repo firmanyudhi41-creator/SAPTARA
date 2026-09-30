@@ -30,7 +30,7 @@ Before relying on a package's API, confirm its installed version:
 
 ## Frontend Bundling
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `vendor/bin/sail pnpm build`, `vendor/bin/sail pnpm dev`, or `vendor/bin/sail composer run dev`. Ask them.
 
 ## Documentation Files
 
@@ -106,7 +106,7 @@ Before relying on a package's API, confirm its installed version:
 
 ## Vite Error
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `vendor/bin/sail pnpm build` or ask the user to run `vendor/bin/sail pnpm dev` or `vendor/bin/sail composer run dev`.
 
 === pint/core rules ===
 
