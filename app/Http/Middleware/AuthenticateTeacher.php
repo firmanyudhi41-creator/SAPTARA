@@ -20,8 +20,15 @@ class AuthenticateTeacher
         // Load or auto-create teacher profile
         $teacher = Teacher::firstOrCreate(
             ['user_id' => $user->id],
-            ['display_name' => $user->name ?: explode('@', $user->email)[0]]
+            [
+                'school_id' => $user->school_id,
+                'display_name' => $user->name ?: explode('@', $user->email)[0],
+            ]
         );
+
+        if ($teacher->school_id === null && $user->school_id !== null) {
+            $teacher->update(['school_id' => $user->school_id]);
+        }
 
         $request->merge(['_teacher' => $teacher]);
 

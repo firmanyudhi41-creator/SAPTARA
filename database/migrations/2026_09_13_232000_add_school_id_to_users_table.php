@@ -8,10 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('school_id')->nullable()->after('role')->constrained('schools')->nullOnDelete();
-            $table->index('school_id');
-        });
+        if (! Schema::hasColumn('users', 'school_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreignId('school_id')->nullable()->after('role')->constrained('schools')->nullOnDelete();
+                $table->index('school_id');
+            });
+        }
     }
 
     public function down(): void

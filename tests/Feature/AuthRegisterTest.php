@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\School;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,7 +12,13 @@ class AuthRegisterTest extends TestCase
 
     public function test_teacher_register_successful_with_password_confirmation(): void
     {
+        $school = School::create([
+            'npsn' => '12345678',
+            'name' => 'SD Bahari',
+        ]);
+
         $response = $this->postJson('/api/auth/teacher/register', [
+            'school_id' => $school->id,
             'name' => 'Guru Budi',
             'email' => 'guru.budi@test.com',
             'password' => 'password123',
@@ -28,10 +35,12 @@ class AuthRegisterTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'guru.budi@test.com',
             'name' => 'Guru Budi',
+            'school_id' => $school->id,
         ]);
 
         $this->assertDatabaseHas('teachers', [
             'display_name' => 'Guru Budi',
+            'school_id' => $school->id,
         ]);
     }
 

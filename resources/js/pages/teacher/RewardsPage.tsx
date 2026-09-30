@@ -104,7 +104,7 @@ export function RewardsPage() {
             >
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.schoolName || c.school_name} ({c.classCode || c.class_code})
+                  {c.schoolName} ({c.classCode || c.class_code})
                 </option>
               ))}
             </select>

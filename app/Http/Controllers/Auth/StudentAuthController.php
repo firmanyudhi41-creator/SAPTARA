@@ -99,7 +99,7 @@ class StudentAuthController extends Controller
             'class' => $cls ? [
                 'id' => $cls->id,
                 'classCode' => $cls->class_code,
-                'schoolName' => $cls->school?->name ?: $cls->school_name,
+                'schoolName' => $cls->school?->name,
                 'shipName' => $cls->ship_name,
             ] : null,
             'school' => $student->school ? [

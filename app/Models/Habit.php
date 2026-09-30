@@ -13,11 +13,7 @@ class Habit extends Model
     protected $fillable = [
         'name', 'icon', 'island', 'badge', 'badge_icon',
         'color', 'description', 'position_x', 'position_y',
-        'is_custom', 'created_by_teacher_id', 'class_id',
-    ];
-
-    protected $casts = [
-        'is_custom' => 'boolean',
+        'created_by_teacher_id', 'class_id',
     ];
 
     protected $appends = [
@@ -56,16 +52,15 @@ class Habit extends Model
         return $this->hasMany(StudentBadge::class);
     }
 
-    // Scopes for Phase 16 (custom habits)
     public function scopeGlobal(Builder $query): Builder
     {
-        return $query->where('is_custom', false);
+        return $query->whereNull('class_id');
     }
 
     public function scopeForClass(Builder $query, int $classId): Builder
     {
         return $query->where(function ($q) use ($classId) {
-            $q->where('is_custom', false)
+            $q->whereNull('class_id')
                 ->orWhere('class_id', $classId);
         });
     }

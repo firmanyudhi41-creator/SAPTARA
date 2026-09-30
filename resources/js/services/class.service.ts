@@ -14,8 +14,6 @@ export const classService = {
     return apiFetch<Class>("/api/classes", {
       method: "POST",
       body: JSON.stringify({
-        school_name: payload.schoolName,
-        schoolName: payload.schoolName,
         class_code: payload.classCode,
         classCode: payload.classCode,
         ship_name: payload.shipName,

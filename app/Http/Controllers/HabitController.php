@@ -119,7 +119,6 @@ class HabitController extends Controller
             'color' => '#0284c7',
             'position_x' => rand(20, 80),
             'position_y' => rand(20, 80),
-            'is_custom' => true,
             'created_by_teacher_id' => $teacherId,
             'class_id' => $validated['class_id'],
         ]);
@@ -166,7 +165,7 @@ class HabitController extends Controller
     {
         $habit = Habit::findOrFail($id);
 
-        if (! $habit->is_custom) {
+        if ($habit->class_id === null) {
             return response()->json(['error' => '7 Kebiasaan pokok Sapta Tara tidak dapat dihapus.'], 403);
         }
 

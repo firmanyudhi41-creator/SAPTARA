@@ -72,7 +72,6 @@ class TeacherStudentManagementTest extends TestCase
             'teacher_id' => $teacherRecordA->id,
             'school_id' => $this->schoolA->id,
             'class_code' => '4A',
-            'school_name' => $this->schoolA->name,
             'ship_name' => 'KRI Merdeka',
         ]);
 
@@ -159,7 +158,6 @@ class TeacherStudentManagementTest extends TestCase
             'teacher_id' => $teacherRecordB->id,
             'school_id' => $this->schoolB->id,
             'class_code' => '4B',
-            'school_name' => $this->schoolB->name,
             'ship_name' => 'KRI Nusantara',
         ]);
 

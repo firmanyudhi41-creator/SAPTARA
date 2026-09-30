@@ -143,8 +143,7 @@ DROP TABLE IF EXISTS `classes`;
 CREATE TABLE `classes` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `teacher_id` bigint unsigned NOT NULL,
-  `school_id` bigint unsigned DEFAULT NULL,
-  `school_name` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `school_id` bigint unsigned NOT NULL,
   `class_code` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ship_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `semester` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -152,11 +151,12 @@ CREATE TABLE `classes` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `classes_class_code_school_name_unique` (`class_code`,`school_name`),
+  UNIQUE KEY `classes_school_id_class_code_unique` (`school_id`,`class_code`),
+  UNIQUE KEY `classes_id_school_id_unique` (`id`,`school_id`),
   KEY `classes_teacher_id_index` (`teacher_id`),
   KEY `classes_school_id_index` (`school_id`),
   CONSTRAINT `classes_school_id_foreign` FOREIGN KEY (`school_id`) REFERENCES `schools` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `classes_teacher_id_foreign` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
+  CONSTRAINT `classes_teacher_id_foreign` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -248,7 +248,6 @@ CREATE TABLE `habits` (
   `description` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `position_x` int NOT NULL,
   `position_y` int NOT NULL,
-  `is_custom` tinyint(1) NOT NULL DEFAULT '0',
   `created_by_teacher_id` bigint unsigned DEFAULT NULL,
   `class_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -384,7 +383,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -393,7 +392,7 @@ CREATE TABLE `migrations` (
 
 LOCK TABLES `migrations` WRITE;
 /*!40000 ALTER TABLE `migrations` DISABLE KEYS */;
-INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_users_table',1),(2,'0001_01_01_000001_create_cache_table',1),(3,'0001_01_01_000002_create_jobs_table',1),(4,'2026_09_12_131227_create_teachers_table',1),(5,'2026_09_12_131229_create_classes_table',1),(6,'2026_09_12_131231_create_students_table',1),(7,'2026_09_12_131233_create_habits_table',1),(8,'2026_09_12_131234_create_habit_completions_table',1),(9,'2026_09_12_131236_create_logbook_entries_table',1),(10,'2026_09_12_131238_create_student_badges_table',1),(11,'2026_09_12_131239_create_student_accessories_table',1),(12,'2026_09_12_131241_create_weekly_snapshots_table',1),(13,'2026_09_12_131256_create_personal_access_tokens_table',1),(14,'2026_09_12_140000_create_parents_and_quests_tables',1),(15,'2026_09_12_150000_create_class_missions_table',1),(16,'2026_09_13_221000_create_schools_table',1),(17,'2026_09_13_221100_add_school_and_auth_columns_to_tables',1),(18,'2026_09_13_232000_add_school_id_to_users_table',1);
+INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_users_table',1),(2,'0001_01_01_000001_create_cache_table',1),(3,'0001_01_01_000002_create_jobs_table',1),(4,'2026_09_12_131227_create_teachers_table',1),(5,'2026_09_12_131229_create_classes_table',1),(6,'2026_09_12_131231_create_students_table',1),(7,'2026_09_12_131233_create_habits_table',1),(8,'2026_09_12_131234_create_habit_completions_table',1),(9,'2026_09_12_131236_create_logbook_entries_table',1),(10,'2026_09_12_131238_create_student_badges_table',1),(11,'2026_09_12_131239_create_student_accessories_table',1),(12,'2026_09_12_131241_create_weekly_snapshots_table',1),(13,'2026_09_12_131256_create_personal_access_tokens_table',1),(14,'2026_09_12_140000_create_parents_and_quests_tables',1),(15,'2026_09_12_150000_create_class_missions_table',1),(16,'2026_09_13_221000_create_schools_table',1),(17,'2026_09_13_221100_add_school_and_auth_columns_to_tables',1),(18,'2026_09_13_232000_add_school_id_to_users_table',1),(19,'2026_09_14_000001_add_stamp_to_schools_and_signature_to_teachers_table',1),(20,'2026_09_30_154154_normalize_school_relations_and_remove_redundant_columns',1);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -439,7 +438,7 @@ CREATE TABLE `parents` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `parents_user_id_foreign` (`user_id`),
+  UNIQUE KEY `parents_user_id_unique` (`user_id`),
   CONSTRAINT `parents_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -532,6 +531,7 @@ CREATE TABLE `schools` (
   `email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `website` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `logo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `stamp` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -682,7 +682,7 @@ DROP TABLE IF EXISTS `students`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `students` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `school_id` bigint unsigned DEFAULT NULL,
+  `school_id` bigint unsigned NOT NULL,
   `class_id` bigint unsigned NOT NULL,
   `nis` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `access_code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -700,6 +700,8 @@ CREATE TABLE `students` (
   UNIQUE KEY `students_school_id_nis_unique` (`school_id`,`nis`),
   KEY `students_class_id_index` (`class_id`),
   KEY `students_access_code_index` (`access_code`),
+  KEY `students_class_id_school_id_foreign` (`class_id`,`school_id`),
+  CONSTRAINT `students_class_id_school_id_foreign` FOREIGN KEY (`class_id`, `school_id`) REFERENCES `classes` (`id`, `school_id`) ON DELETE CASCADE,
   CONSTRAINT `students_class_id_foreign` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE,
   CONSTRAINT `students_school_id_foreign` FOREIGN KEY (`school_id`) REFERENCES `schools` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -726,6 +728,9 @@ CREATE TABLE `teachers` (
   `user_id` bigint unsigned NOT NULL,
   `school_id` bigint unsigned DEFAULT NULL,
   `display_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nip` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `signature` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `title` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -780,34 +785,6 @@ LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `weekly_snapshots`
---
-
-DROP TABLE IF EXISTS `weekly_snapshots`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `weekly_snapshots` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `student_id` bigint unsigned NOT NULL,
-  `week_start_date` date NOT NULL,
-  `day_of_week` tinyint NOT NULL,
-  `completed_count` int NOT NULL DEFAULT '0',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `weekly_snapshots_student_id_week_start_date_index` (`student_id`,`week_start_date`),
-  CONSTRAINT `weekly_snapshots_student_id_foreign` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `weekly_snapshots`
---
-
-LOCK TABLES `weekly_snapshots` WRITE;
-/*!40000 ALTER TABLE `weekly_snapshots` DISABLE KEYS */;
-/*!40000 ALTER TABLE `weekly_snapshots` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

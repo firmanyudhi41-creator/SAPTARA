@@ -152,7 +152,7 @@ export function MapPage() {
                           <h4 className={`text-xs font-bold ${isCompleted ? "text-emerald-950 line-through opacity-80" : "text-slate-800"}`}>
                             {habit.name}
                           </h4>
-                          {habit.is_custom && (
+                          {habit.class_id !== null && habit.class_id !== undefined && (
                             <span className="text-[10px] bg-sky-100 text-sky-700 font-semibold px-1.5 py-0.2 rounded">
                               Khusus Kelas
                             </span>

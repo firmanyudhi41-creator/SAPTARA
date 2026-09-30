@@ -11,7 +11,7 @@ class SchoolClass extends Model
     protected $table = 'classes';
 
     protected $fillable = [
-        'teacher_id', 'school_id', 'school_name', 'class_code',
+        'teacher_id', 'school_id', 'class_code',
         'ship_name', 'semester', 'tahun_ajaran',
     ];
 
@@ -30,7 +30,7 @@ class SchoolClass extends Model
 
     public function getSchoolNameAttribute(): string
     {
-        return $this->attributes['school_name'] ?? '';
+        return $this->school?->name ?? '';
     }
 
     public function getClassCodeAttribute(): string
@@ -46,15 +46,6 @@ class SchoolClass extends Model
     public function getTeacherIdAttribute(): ?int
     {
         return isset($this->attributes['teacher_id']) ? (int) $this->attributes['teacher_id'] : null;
-    }
-
-    protected static function booted(): void
-    {
-        static::creating(function (SchoolClass $class) {
-            if (empty($class->school_name) && ! empty($class->school_id)) {
-                $class->school_name = School::find($class->school_id)?->name ?? 'Sekolah';
-            }
-        });
     }
 
     public function school(): BelongsTo

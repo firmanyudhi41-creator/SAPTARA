@@ -55,7 +55,6 @@ class SchoolMultiTenantTest extends TestCase
             'teacher_id' => $teacher->id,
             'school_id' => $school->id,
             'class_code' => '7A',
-            'school_name' => $school->name,
             'ship_name' => 'KRI Bahari',
         ]);
 
