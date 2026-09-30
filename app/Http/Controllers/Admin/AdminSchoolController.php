@@ -146,6 +146,7 @@ class AdminSchoolController extends Controller
             'email' => 'nullable|email|max:100',
             'website' => 'nullable|string|max:255',
             'logo' => 'nullable', // can be file or string
+            'stamp' => 'nullable',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -155,6 +156,14 @@ class AdminSchoolController extends Controller
             $logoPath = Storage::url($path);
         } elseif ($request->filled('logo') && is_string($request->logo)) {
             $logoPath = $request->logo;
+        }
+
+        $stampPath = null;
+        if ($request->hasFile('stamp') && $request->file('stamp')->isValid()) {
+            $path = $request->file('stamp')->store('schools/stamps', 'public');
+            $stampPath = Storage::url($path);
+        } elseif ($request->filled('stamp') && is_string($request->stamp)) {
+            $stampPath = $request->stamp;
         }
 
         $slug = $request->filled('slug')
@@ -182,6 +191,7 @@ class AdminSchoolController extends Controller
             'email' => $request->email,
             'website' => $request->website,
             'logo' => $logoPath,
+            'stamp' => $stampPath,
             'is_active' => $request->has('is_active') ? (bool) $request->is_active : true,
         ]);
 
@@ -227,6 +237,7 @@ class AdminSchoolController extends Controller
             'email' => 'nullable|email|max:100',
             'website' => 'nullable|string|max:255',
             'logo' => 'nullable',
+            'stamp' => 'nullable',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -256,6 +267,13 @@ class AdminSchoolController extends Controller
             $data['logo'] = Storage::url($path);
         } elseif ($request->filled('logo') && is_string($request->logo)) {
             $data['logo'] = $request->logo;
+        }
+
+        if ($request->hasFile('stamp') && $request->file('stamp')->isValid()) {
+            $path = $request->file('stamp')->store('schools/stamps', 'public');
+            $data['stamp'] = Storage::url($path);
+        } elseif ($request->filled('stamp') && is_string($request->stamp)) {
+            $data['stamp'] = $request->stamp;
         }
 
         $school->update($data);

@@ -42,6 +42,7 @@ Route::post('/auth/parent/switch-child/{id}', [ParentAuthController::class, 'swi
 // ── Teacher routes (Sanctum) ──────────────────────────────────
 Route::middleware(['auth:sanctum', 'auth.teacher'])->group(function () {
     Route::get('/auth/me', [TeacherAuthController::class, 'me']);
+    Route::match(['put', 'post'], '/teacher/profile', [TeacherAuthController::class, 'updateProfile']);
     Route::post('/auth/logout', [TeacherAuthController::class, 'logout']);
 
     // Classes
@@ -149,6 +150,7 @@ Route::middleware(['auth:sanctum', 'auth.school_admin'])->prefix('school-admin')
     // Dewan Guru
     Route::get('/teachers', [SchoolAdminController::class, 'getTeachers']);
     Route::post('/teachers', [SchoolAdminController::class, 'createTeacher']);
+    Route::match(['put', 'post'], '/teachers/{id}', [SchoolAdminController::class, 'updateTeacher']);
     Route::put('/teachers/{id}/reset-password', [SchoolAdminController::class, 'resetTeacherPassword']);
     Route::delete('/teachers/{id}', [SchoolAdminController::class, 'deleteTeacher']);
 

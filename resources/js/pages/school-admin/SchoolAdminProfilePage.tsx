@@ -34,6 +34,8 @@ export function SchoolAdminProfilePage() {
   const [website, setWebsite] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [stampFile, setStampFile] = useState<File | null>(null);
+  const [stampPreview, setStampPreview] = useState<string | null>(null);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -50,6 +52,7 @@ export function SchoolAdminProfilePage() {
       setEmail(data.email || "");
       setWebsite(data.website || "");
       setLogoPreview(data.logo || null);
+      setStampPreview(data.stamp || null);
     } catch (err: any) {
       setAlertMsg({ type: "error", text: err.message || "Gagal memuat profil sekolah." });
     } finally {
@@ -66,6 +69,14 @@ export function SchoolAdminProfilePage() {
     if (file) {
       setLogoFile(file);
       setLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleStampChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setStampFile(file);
+      setStampPreview(URL.createObjectURL(file));
     }
   };
 
@@ -86,6 +97,9 @@ export function SchoolAdminProfilePage() {
     formData.append("website", website);
     if (logoFile) {
       formData.append("logo", logoFile);
+    }
+    if (stampFile) {
+      formData.append("stamp", stampFile);
     }
 
     try {
@@ -145,26 +159,60 @@ export function SchoolAdminProfilePage() {
             <CardDescription className="text-xs">Nomor pokok sekolah nasional dan nama resmi</CardDescription>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="relative">
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt="Logo Sekolah"
-                    className="h-20 w-20 rounded-2xl object-contain border border-slate-200 bg-slate-50 p-1 shadow-xs"
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-3xl text-slate-400">
-                    🏫
-                  </div>
-                )}
-                <label className="absolute -bottom-1 -right-1 bg-teal-600 text-white p-1 rounded-lg cursor-pointer hover:bg-teal-700 shadow-sm">
-                  <Upload className="h-3.5 w-3.5" />
-                  <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
-                </label>
+            {/* Logo dan Stempel Resmi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-slate-100">
+              {/* Logo Sekolah */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div className="relative shrink-0">
+                  {logoPreview ? (
+                    <img
+                      src={logoPreview}
+                      alt="Logo Sekolah"
+                      className="h-16 w-16 rounded-xl object-contain border border-slate-200 bg-white p-1 shadow-xs"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-xl bg-white border border-dashed border-slate-300 flex items-center justify-center text-2xl text-slate-400">
+                      🏫
+                    </div>
+                  )}
+                  <label className="absolute -bottom-1 -right-1 bg-teal-600 text-white p-1 rounded-lg cursor-pointer hover:bg-teal-700 shadow-sm">
+                    <Upload className="h-3.5 w-3.5" />
+                    <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                  </label>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold text-slate-800">Logo Resmi Sekolah</span>
+                  <span className="block text-[11px] text-slate-500">Tampil di Kop Surat & Raport Siswa</span>
+                </div>
               </div>
 
-              <div className="flex-1 w-full space-y-3">
+              {/* Stempel Sekolah */}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div className="relative shrink-0">
+                  {stampPreview ? (
+                    <img
+                      src={stampPreview}
+                      alt="Stempel Sekolah"
+                      className="h-16 w-16 rounded-full object-contain border border-slate-200 bg-white p-1 shadow-xs"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-full bg-white border border-dashed border-slate-300 flex items-center justify-center text-2xl text-slate-400">
+                      💮
+                    </div>
+                  )}
+                  <label className="absolute -bottom-1 -right-1 bg-sky-600 text-white p-1 rounded-lg cursor-pointer hover:bg-sky-700 shadow-sm">
+                    <Upload className="h-3.5 w-3.5" />
+                    <input type="file" accept="image/*" onChange={handleStampChange} className="hidden" />
+                  </label>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold text-slate-800">Stempel Resmi Sekolah</span>
+                  <span className="block text-[11px] text-slate-500">Format PNG transparan untuk kolom pengesahan raport</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -189,7 +237,6 @@ export function SchoolAdminProfilePage() {
                   </div>
                 </div>
               </div>
-            </div>
           </CardContent>
         </Card>
 

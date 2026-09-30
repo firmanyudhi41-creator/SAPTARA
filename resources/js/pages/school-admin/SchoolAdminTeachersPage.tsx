@@ -14,6 +14,9 @@ import {
   Mail,
   Ship,
   Search,
+  Edit2,
+  PenTool,
+  Upload,
 } from "lucide-react";
 
 export function SchoolAdminTeachersPage() {
@@ -35,6 +38,16 @@ export function SchoolAdminTeachersPage() {
   const [selectedTeacher, setSelectedTeacher] = useState<any | null>(null);
   const [newPassword, setNewPassword] = useState("password123");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Modal Edit Teacher (NIP, Gelar, TTD)
+  const [editModal, setEditModal] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<any | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editNip, setEditNip] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editSignatureFile, setEditSignatureFile] = useState<File | null>(null);
+  const [editSignaturePreview, setEditSignaturePreview] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchTeachers = async () => {
     setLoading(true);
@@ -102,6 +115,51 @@ export function SchoolAdminTeachersPage() {
       fetchTeachers();
     } catch (err: any) {
       setAlertMsg({ type: "error", text: err.message || "Gagal menghapus guru." });
+    }
+  };
+
+  const handleOpenEdit = (teacher: any) => {
+    setEditingTeacher(teacher);
+    setEditDisplayName(teacher.display_name || teacher.user?.name || "");
+    setEditNip(teacher.nip || "");
+    setEditTitle(teacher.title || "");
+    setEditSignaturePreview(teacher.signature || null);
+    setEditSignatureFile(null);
+    setEditModal(true);
+  };
+
+  const handleEditSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditSignatureFile(file);
+      setEditSignaturePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleUpdateTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTeacher) return;
+    setEditLoading(true);
+    setAlertMsg(null);
+
+    const formData = new FormData();
+    formData.append("display_name", editDisplayName);
+    formData.append("nip", editNip);
+    formData.append("title", editTitle);
+    if (editSignatureFile) {
+      formData.append("signature", editSignatureFile);
+    }
+
+    try {
+      const res = await schoolAdminService.updateTeacher(editingTeacher.id, formData);
+      setAlertMsg({ type: "success", text: res.message });
+      setEditModal(false);
+      setEditingTeacher(null);
+      fetchTeachers();
+    } catch (err: any) {
+      setAlertMsg({ type: "error", text: err.message || "Gagal memperbarui data guru." });
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -198,11 +256,23 @@ export function SchoolAdminTeachersPage() {
                   <tr key={teacher.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3 px-4 font-bold text-slate-900">
                       <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+                        <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">
                           👨‍🏫
                         </div>
                         <div>
-                          <span>{teacher.display_name || teacher.user?.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span>{teacher.display_name || teacher.user?.name}</span>
+                            {teacher.signature ? (
+                              <span className="text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded" title="Tanda Tangan Digital Terpasang">
+                                ✍️ TTD
+                              </span>
+                            ) : null}
+                          </div>
+                          {teacher.nip && (
+                            <span className="block text-[10px] text-slate-500 font-mono font-normal">
+                              NIP. {teacher.nip}
+                            </span>
+                          )}
                           {teacher.display_name !== teacher.user?.name && (
                             <span className="block text-[10px] text-slate-400 font-normal">
                               Akun: {teacher.user?.name}
@@ -236,6 +306,17 @@ export function SchoolAdminTeachersPage() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenEdit(teacher)}
+                          className="h-8 text-xs gap-1 text-sky-700 border-sky-200 hover:bg-sky-50"
+                          title="Edit NIP & Tanda Tangan Guru"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          <span>Edit</span>
+                        </Button>
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -369,6 +450,93 @@ export function SchoolAdminTeachersPage() {
             </Button>
             <Button variant="primary" size="sm" type="submit" disabled={resetLoading}>
               {resetLoading ? "Memproses..." : "Simpan Kata Sandi"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Modal Edit Guru (NIP, Gelar, Tanda Tangan) */}
+      <Dialog
+        open={editModal}
+        onClose={() => setEditModal(false)}
+        title={`Edit Data Guru: ${editingTeacher?.display_name || "Guru"} ✍️`}
+        description="Lengkapi NIP, gelar/jabatan, dan tanda tangan digital guru untuk dokumen raport"
+      >
+        <form onSubmit={handleUpdateTeacher} className="space-y-4 pt-1">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Nama Lengkap & Gelar Guru
+            </label>
+            <Input
+              value={editDisplayName}
+              onChange={(e) => setEditDisplayName(e.target.value)}
+              placeholder="Contoh: Budi Santoso, S.Pd."
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              NIP (Nomor Induk Pegawai)
+            </label>
+            <Input
+              value={editNip}
+              onChange={(e) => setEditNip(e.target.value)}
+              placeholder="Contoh: 19850712 201001 1 008"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Gelar / Jabatan Tambahan
+            </label>
+            <Input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Contoh: Guru Kelas / Pembina Karakter"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Tanda Tangan Digital Guru
+            </label>
+            <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="h-16 w-32 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center p-1 relative overflow-hidden">
+                {editSignaturePreview ? (
+                  <img
+                    src={editSignaturePreview}
+                    alt="Pratinjau Tanda Tangan"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-[10px] text-slate-400 italic">Belum ada</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 text-white text-xs font-bold rounded-lg cursor-pointer hover:bg-sky-700 shadow-xs">
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Unggah Tanda Tangan</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditSignatureChange}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Format PNG transparan disarankan untuk raport.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" type="button" onClick={() => setEditModal(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" size="sm" type="submit" disabled={editLoading}>
+              {editLoading ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </div>
         </form>

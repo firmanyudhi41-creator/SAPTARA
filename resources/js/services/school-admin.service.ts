@@ -93,6 +93,14 @@ export const schoolAdminService = {
     });
   },
 
+  async updateTeacher(id: number, data: FormData | Record<string, any>): Promise<{ success: boolean; message: string; teacher: any }> {
+    const isFormData = data instanceof FormData;
+    return apiFetch<{ success: boolean; message: string; teacher: any }>(`/api/school-admin/teachers/${id}`, {
+      method: "POST",
+      body: isFormData ? data : JSON.stringify(data),
+    });
+  },
+
   async resetTeacherPassword(id: number, password: string): Promise<{ success: boolean; message: string }> {
     return apiFetch<{ success: boolean; message: string }>(`/api/school-admin/teachers/${id}/reset-password`, {
       method: "PUT",

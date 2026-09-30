@@ -199,6 +199,19 @@ export const authService = {
     return apiFetch<any>("/api/auth/me");
   },
 
+  // Teacher Update Profile & Digital Signature
+  async updateTeacherProfile(data: FormData | Record<string, any>): Promise<{ success: boolean; message: string; teacher: any }> {
+    const isFormData = data instanceof FormData;
+    const result = await apiFetch<any>("/api/teacher/profile", {
+      method: "POST",
+      body: isFormData ? data : JSON.stringify(data),
+    });
+    if (result.teacher) {
+      setTeacherInfo(result.teacher);
+    }
+    return result;
+  },
+
   // Teacher Logout
   async teacherLogout(): Promise<void> {
     try {

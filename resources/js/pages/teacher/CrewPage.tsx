@@ -27,11 +27,14 @@ import {
   Printer,
   RefreshCw,
   Edit2,
+  PenTool,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { downloadAuthorizedFile } from "../../lib/download";
 import { ClassHabitsManager } from "../../components/ClassHabitsManager";
 import { ClassMissionManager } from "../../components/ClassMissionManager";
+import { authService } from "../../services/auth.service";
+import { useTeacherInfo } from "../../hooks/use-auth";
 
 const AVATARS = ["🧒", "👧", "👦", "🧒🏻", "👧🏻", "👦🏻", "🧑‍🦱", "👩‍🦰", "🧑‍🎓"];
 
@@ -137,7 +140,7 @@ export function CrewPage() {
   };
 
   const handleCopyCredentials = (student: any) => {
-    const school = currentClass?.schoolName || currentClass?.school_name || "SAPTARA";
+    const school = currentClass?.schoolName || "SAPTARA";
     const text = `⚓ KREDENSIAL AKSES SISWA SAPTARA ⚓\nSekolah: ${school}\nNama: ${student.name}\nNIS: ${student.nis || "-"}\nPIN Akses: ${student.access_code || student.accessCode || "-"}\n\nSilakan masuk melalui: ${window.location.origin}`;
     navigator.clipboard.writeText(text);
     setCopiedStudentId(student.id);
@@ -146,7 +149,6 @@ export function CrewPage() {
 
   // Add class modal state
   const [addClassModal, setAddClassModal] = useState(false);
-  const [newSchoolName, setNewSchoolName] = useState("");
   const [newClassCode, setNewClassCode] = useState("");
   const [newShipName, setNewShipName] = useState("");
   const [addClassError, setAddClassError] = useState<string | null>(null);
@@ -253,6 +255,68 @@ export function CrewPage() {
     }
   };
 
+  // Teacher Profile & Signature modal
+  const [profileModal, setProfileModal] = useState(false);
+  const teacherInfo = useTeacherInfo();
+  const [teacherDisplayName, setTeacherDisplayName] = useState("");
+  const [teacherNip, setTeacherNip] = useState("");
+  const [teacherTitle, setTeacherTitle] = useState("");
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const handleOpenProfileModal = () => {
+    setTeacherDisplayName(teacherInfo?.displayName || teacherInfo?.display_name || teacherInfo?.name || "");
+    setTeacherNip(teacherInfo?.nip || "");
+    setTeacherTitle(teacherInfo?.title || "Guru Kelas / Pembina Karakter");
+    setSignaturePreview(teacherInfo?.signature || null);
+    setSignatureFile(null);
+    setProfileSuccess(null);
+    setProfileError(null);
+    setProfileModal(true);
+  };
+
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSignatureFile(file);
+      setSignaturePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    const formData = new FormData();
+    formData.append("display_name", teacherDisplayName);
+    formData.append("nip", teacherNip);
+    formData.append("title", teacherTitle);
+    if (signatureFile) {
+      formData.append("signature", signatureFile);
+    }
+
+    try {
+      const res = await authService.updateTeacherProfile(formData);
+      setProfileSuccess(res.message);
+      if (res.teacher?.signature) {
+        setSignaturePreview(res.teacher.signature);
+      }
+      setTimeout(() => {
+        setProfileModal(false);
+        setProfileSuccess(null);
+      }, 1500);
+    } catch (err: any) {
+      setProfileError(err.message || "Gagal menyimpan profil dan tanda tangan.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (classId) {
       setStudentTargetClassId(classId);
@@ -279,7 +343,6 @@ export function CrewPage() {
 
   const handleOpenAddClass = () => {
     setAddClassError(null);
-    setNewSchoolName("");
     setNewClassCode("");
     setNewShipName("");
     setAddClassModal(true);
@@ -331,21 +394,19 @@ export function CrewPage() {
     e.preventDefault();
     setAddClassError(null);
 
-    if (!newSchoolName.trim() || !newClassCode.trim()) {
-      setAddClassError("Nama sekolah dan kode kelas wajib diisi");
+    if (!newClassCode.trim()) {
+      setAddClassError("Kode kelas wajib diisi");
       return;
     }
 
     try {
       const created = await createClassMutation.mutateAsync({
-        schoolName: newSchoolName.trim(),
         classCode: newClassCode.trim().toUpperCase(),
         shipName: newShipName.trim() || undefined,
       });
       confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
       setSelectedClassId(created.id);
       setStudentTargetClassId(created.id);
-      setNewSchoolName("");
       setNewClassCode("");
       setNewShipName("");
       setAddClassModal(false);
@@ -377,7 +438,7 @@ export function CrewPage() {
             >
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.schoolName || c.school_name} ({c.classCode || c.class_code})
+                  {c.schoolName} ({c.classCode || c.class_code})
                 </option>
               ))}
             </select>
@@ -397,7 +458,7 @@ export function CrewPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xl">⛵</span>
                 <h3 className="font-bold text-sm text-slate-900">
-                  {currentClass.schoolName || currentClass.school_name} — Kapal "{currentClass.shipName || currentClass.ship_name || 'Saptara'}"
+                  {currentClass.schoolName} — Kapal "{currentClass.shipName || currentClass.ship_name || 'Saptara'}"
                 </h3>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -483,6 +544,17 @@ export function CrewPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleOpenProfileModal}
+                className="gap-1 text-xs text-purple-700 border-purple-300 hover:bg-purple-50 font-medium"
+                title="Atur Tanda Tangan Digital & NIP Guru untuk Raport"
+              >
+                <PenTool className="h-3.5 w-3.5" />
+                <span>Tanda Tangan & NIP</span>
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -901,18 +973,6 @@ export function CrewPage() {
         <form onSubmit={handleAddClass} className="space-y-4 pt-1">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Nama Sekolah / Kelas
-            </label>
-            <Input
-              value={newSchoolName}
-              onChange={(e) => setNewSchoolName(e.target.value)}
-              placeholder="Contoh: SDN 1 Merdeka - Kelas 5B"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Kode Unik Kelas (Huruf & Angka)
             </label>
             <Input
@@ -1093,7 +1153,7 @@ export function CrewPage() {
                     <span className="text-xl">⛵</span>
                     <div>
                       <h4 className="font-display font-extrabold text-xs text-sky-900 leading-tight">
-                        {currentClass?.schoolName || currentClass?.school_name || "SAPTARA"}
+                        {currentClass?.schoolName || "SAPTARA"}
                       </h4>
                       <p className="text-[10px] font-semibold text-sky-600">
                         Kelas: {currentClass?.classCode || currentClass?.class_code}
@@ -1163,6 +1223,131 @@ export function CrewPage() {
               }
             }
           `}</style>
+        </div>
+      </Dialog>
+
+      {/* Modal Pengaturan Profil Guru & Tanda Tangan Digital */}
+      <Dialog open={profileModal} onOpenChange={setProfileModal}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-purple-700 font-bold border-b pb-2">
+            <PenTool className="h-5 w-5" />
+            <h3 className="text-base text-slate-900">Pengaturan Tanda Tangan & NIP Guru</h3>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Lengkapi nama lengkap, NIP, dan unggah tanda tangan digital Bapak/Ibu Guru. Informasi ini akan otomatis tercantum pada dokumen <strong>Raport Karakter Siswa</strong> dan <strong>Rekapitulasi Kelas</strong>.
+          </p>
+
+          {profileSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{profileSuccess}</span>
+            </div>
+          )}
+
+          {profileError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{profileError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveProfile} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Nama Lengkap & Gelar Guru
+              </label>
+              <Input
+                value={teacherDisplayName}
+                onChange={(e) => setTeacherDisplayName(e.target.value)}
+                placeholder="Contoh: Budi Santoso, S.Pd."
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                NIP (Nomor Induk Pegawai)
+              </label>
+              <Input
+                value={teacherNip}
+                onChange={(e) => setTeacherNip(e.target.value)}
+                placeholder="Contoh: 19850712 201001 1 008 (kosongkan jika belum ada)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Jabatan / Keterangan
+              </label>
+              <Input
+                value={teacherTitle}
+                onChange={(e) => setTeacherTitle(e.target.value)}
+                placeholder="Guru Kelas / Pembina Karakter"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Tanda Tangan Digital (Gambar PNG Transparan Disarankan)
+              </label>
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="h-16 w-32 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center p-1 relative overflow-hidden">
+                  {signaturePreview ? (
+                    <img
+                      src={signaturePreview}
+                      alt="Pratinjau Tanda Tangan"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-slate-400 italic">Belum ada</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg cursor-pointer hover:bg-purple-700 shadow-xs">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>Unggah Tanda Tangan</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Gunakan foto/scan tanda tangan pada kertas putih atau file PNG transparan.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setProfileModal(false)}
+                disabled={profileSaving}
+              >
+                Tutup
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={profileSaving}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+              >
+                {profileSaving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Simpan Profil & Tanda Tangan"
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
       </Dialog>
     </div>
