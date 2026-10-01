@@ -25,9 +25,9 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->index('name');
-            $table->index(['city', 'province']);
-            $table->index('is_active');
+            $table->index('name', 'idx_schools_name');
+            $table->index(['city', 'province'], 'idx_schools_city');
+            $table->index('is_active', 'idx_schools_is_active');
         });
     }
 

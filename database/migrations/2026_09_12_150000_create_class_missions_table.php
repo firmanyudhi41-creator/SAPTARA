@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('class_missions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('class_id')->constrained('classes')->cascadeOnDelete();
+            $table->foreignId('class_id')->constrained('classes', 'id', 'fk_class_missions_class_id')->cascadeOnDelete();
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('type')->default('total_habits'); // 'total_habits' | 'photo_logbooks'
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->index(['class_id', 'is_active']);
+            $table->index(['class_id', 'is_active'], 'idx_class_missions_class_id_is_active');
         });
 
         Schema::create('class_mission_claims', function (Blueprint $table) {

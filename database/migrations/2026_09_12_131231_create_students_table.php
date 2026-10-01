@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('class_id')->constrained('classes')->cascadeOnDelete();
+            $table->foreignId('class_id')->constrained('classes', 'id', 'fk_students_class_id')->cascadeOnDelete();
             $table->string('name', 150);
             $table->string('avatar')->default('🧒');
             $table->integer('xp')->default(0);
@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('parent_email')->nullable();
             $table->timestamps();
 
-            $table->unique(['name', 'class_id']);
-            $table->index('class_id');
+            $table->unique(['name', 'class_id'], 'idx_students_name_class_id');
+            $table->index('class_id', 'idx_students_class_id');
         });
     }
 

@@ -10,8 +10,8 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('users', 'school_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->foreignId('school_id')->nullable()->after('role')->constrained('schools')->nullOnDelete();
-                $table->index('school_id');
+                $table->foreignId('school_id')->nullable()->after('role')->constrained('schools', 'id', 'fk_users_school_id')->nullOnDelete();
+                $table->index('school_id', 'idx_users_school_id');
             });
         }
     }
@@ -19,7 +19,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['school_id']);
+            $table->dropForeign('fk_users_school_id');
             $table->dropColumn('school_id');
         });
     }
