@@ -21,8 +21,8 @@ return new class extends Migration
             $table->integer('position_y');
             // Phase 16: custom habit support
             $table->boolean('is_custom')->default(false);
-            $table->foreignId('created_by_teacher_id')->nullable()->constrained('teachers')->nullOnDelete();
-            $table->foreignId('class_id')->nullable()->constrained('classes')->cascadeOnDelete();
+            $table->foreignId('created_by_teacher_id')->nullable()->constrained('teachers', 'id', 'fk_habits_created_by_teacher_id')->nullOnDelete();
+            $table->foreignId('class_id')->nullable()->constrained('classes', 'id', 'fk_habits_class_id')->cascadeOnDelete();
         });
     }
 

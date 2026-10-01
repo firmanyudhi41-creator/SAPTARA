@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('classes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('teacher_id')->constrained('teachers')->cascadeOnDelete();
+            $table->foreignId('teacher_id')->constrained('teachers', 'id', 'fk_classes_teacher_id')->cascadeOnDelete();
             $table->string('school_name', 150);
             $table->string('class_code', 50);
             $table->string('ship_name');
@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('tahun_ajaran')->nullable();
             $table->timestamps();
 
-            $table->unique(['class_code', 'school_name']);
-            $table->index('teacher_id');
+            $table->unique(['class_code', 'school_name'], 'idx_classes_school_code_school_name');
+            $table->index('teacher_id', 'idx_classes_teacher_id');
         });
     }
 

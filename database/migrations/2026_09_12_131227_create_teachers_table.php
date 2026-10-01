@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('display_name');
             $table->timestamps();
 
-            $table->unique('user_id');
+            $table->unique('user_id', 'idx_teachers_user_id');
         });
     }
 

@@ -10,12 +10,12 @@ return new class extends Migration
     {
         Schema::create('student_badges', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
-            $table->foreignId('habit_id')->constrained('habits')->cascadeOnDelete();
-            $table->foreignId('awarded_by_teacher_id')->nullable()->constrained('teachers')->nullOnDelete();
+            $table->foreignId('student_id')->constrained('students', 'id', 'fk_student_badges_student_id')->cascadeOnDelete();
+            $table->foreignId('habit_id')->constrained('habits', 'id', 'fk_student_badges_habit_id')->cascadeOnDelete();
+            $table->foreignId('awarded_by_teacher_id')->nullable()->constrained('teachers', 'id', 'fk_student_badges_awarded_by_teacher_id')->nullOnDelete();
             $table->timestamp('awarded_at')->useCurrent();
 
-            $table->unique(['student_id', 'habit_id']);
+            $table->unique(['student_id', 'habit_id'], 'idx_student_badges_student_id');
         });
     }
 

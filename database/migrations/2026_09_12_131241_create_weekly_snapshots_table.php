@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::create('weekly_snapshots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
+            $table->foreignId('student_id')->constrained('students', 'id', 'fk_weekly_snapshots_student_id')->cascadeOnDelete();
             $table->date('week_start_date');
             $table->tinyInteger('day_of_week'); // 0=Mon, 6=Sun
             $table->integer('completed_count')->default(0);
             $table->timestamp('created_at')->useCurrent();
 
-            $table->index(['student_id', 'week_start_date']);
+            $table->index(['student_id', 'week_start_date'], 'idx_weekly_snapshots_student_id_week_start_date');
         });
     }
 
