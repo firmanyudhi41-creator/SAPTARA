@@ -163,6 +163,23 @@ foreach ($storageDirs as $dir) {
 }
 echo "   ✅ Direktori storage & cache siap digunakan.\n\n";
 
+// LANGKAH 1.5: Pastikan JWT_SECRET terisi di .env untuk autentikasi siswa
+$envPath = $baseDir . '.env';
+if (file_exists($envPath)) {
+    $envContent = file_get_contents($envPath);
+    if (! preg_match('/^JWT_SECRET=[a-zA-Z0-9_\-]+/m', $envContent)) {
+        $generatedJwtSecret = bin2hex(random_bytes(32));
+        if (preg_match('/^JWT_SECRET=/m', $envContent)) {
+            $envContent = preg_replace('/^JWT_SECRET=.*$/m', 'JWT_SECRET='.$generatedJwtSecret, $envContent);
+        } else {
+            $envContent .= "\n# JWT Authentication Secret (Siswa)\nJWT_SECRET=".$generatedJwtSecret."\n";
+        }
+        @file_put_contents($envPath, $envContent);
+        config(['jwt.secret' => $generatedJwtSecret]);
+        echo "   ✅ Kunci JWT_SECRET berhasil digenerate otomatis ke file .env.\n\n";
+    }
+}
+
 // LANGKAH 2: Tes Koneksi Database Sebelum Menjalankan Migrasi
 echo "2. Memeriksa koneksi database MySQL...\n";
 $dbConfig = config('database.connections.mysql');

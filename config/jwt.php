@@ -1,13 +1,9 @@
 <?php
 
-use Tymon\JWTAuth\Providers\Auth\Illuminate;
-use Tymon\JWTAuth\Providers\JWT\Lcobucci;
-use Tymon\JWTAuth\Providers\JWT\Provider;
-
 /*
  * This file is part of jwt-auth.
  *
- * (c) Sean Tymon <tymon148@gmail.com>
+ * (c) Sean Tymon <tymon172@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -29,7 +25,7 @@ return [
     |
     */
 
-    'secret' => env('JWT_SECRET'),
+    'secret' => env('JWT_SECRET') ?: (env('APP_KEY') ? hash('sha256', (string) env('APP_KEY')) : null),
 
     /*
     |--------------------------------------------------------------------------
@@ -40,11 +36,9 @@ return [
     | signed with a random string (defined in `JWT_SECRET`) or using the
     | following public & private keys.
     |
-    | Symmetric Algorithms:
-    | HS256, HS384 & HS512 will use `JWT_SECRET`.
-    |
-    | Asymmetric Algorithms:
-    | RS256, RS384 & RS512 / ES256, ES384 & ES512 will use the keys below.
+    | Setting these values will result in the used of the RSA algorithms
+    | unless otherwise specified, which will also require you to set
+    | the algorithm structure below.
     |
     */
 
@@ -101,7 +95,8 @@ return [
     | Some people may want this behaviour for e.g. a mobile app.
     | This is not particularly recommended, so make sure you have appropriate
     | systems in place to revoke the token if necessary.
-    | Notice: If you set this to null you should remove 'exp' element from 'required_claims' list.
+    | Notice: Make sure you have the `exp` claim enabled if you want to
+    | use this feature.
     |
     */
 
@@ -113,12 +108,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Specify the length of time (in minutes) that the token can be refreshed
-    | within. I.E. The user can refresh their token within a 2 week window of
+    | within. I.e. The user can refresh their token within a 2 week window of
     | the original token being created until they must re-authenticate.
     | Defaults to 2 weeks.
     |
-    | You can also set this to null, to yield an infinite refresh time.
-    | Some may want this instead of never expiring tokens for e.g. a mobile app.
+    | You can also set this to null, to yield an inifinite refresh time.
+    | Some people may want this behaviour for e.g. a mobile app.
     | This is not particularly recommended, so make sure you have appropriate
     | systems in place to revoke the token if necessary.
     |
@@ -133,18 +128,21 @@ return [
     |
     | Specify the hashing algorithm that will be used to sign the token.
     |
+    | See here: https://github.com/tymondesigns/jwt-auth/wiki/Configuration
+    | for possible values.
+    |
     */
 
-    'algo' => env('JWT_ALGO', Provider::ALGO_HS256),
+    'algo' => env('JWT_ALGO', Tymon\JWTAuth\Providers\JWT\Provider::ALGO_HS256),
 
     /*
     |--------------------------------------------------------------------------
     | Required Claims
     |--------------------------------------------------------------------------
     |
-    | Specify the required claims that must exist in any token.
+    | Specify the required claims that must exist in any token that is decoded.
     | A TokenInvalidException will be thrown if any of these claims are not
-    | present in the payload.
+    | present in the token.
     |
     */
 
@@ -163,10 +161,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Specify the claim keys to be persisted when refreshing a token.
-    | `sub` and `iat` will automatically be persisted, in
-    | addition to the these claims.
-    |
-    | Note: If a claim does not exist then it will be ignored.
+    | `sub` and `jti` will always be persisted.
     |
     */
 
@@ -180,19 +175,16 @@ return [
     | Lock Subject
     |--------------------------------------------------------------------------
     |
-    | This will determine whether a `prv` claim is automatically added to
+    | This will determine whether a `prv` Claim will automatically be added to
     | the token. The purpose of this is to ensure that if you have multiple
-    | authentication models e.g. `App\User` & `App\OtherPerson`, then we
-    | should prevent one authentication request from impersonating another,
-    | if 2 tokens happen to have the same id across the 2 different models.
+    | authentication models e.g. `App\User` & `App\OtherUser`, then we
+    | canEntangle the subject claimed, if they happen to share the same ID.
     |
-    | Under specific circumstances, you may want to disable this behaviour
-    | e.g. if you only have one authentication model, then you would save
-    | a little on token size.
+    | If set to false, then no check will be made.
     |
     */
 
-    'lock_subject' => true,
+    'lock_subject' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -200,12 +192,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | This property gives the jwt timestamp claims some "leeway".
-    | Meaning that if you have any unavoidable slight clock skew on
-    | any of your servers then this will afford you some level of cushioning.
-    |
-    | This applies to the claims `iat`, `nbf` and `exp`.
-    |
-    | Specify in seconds - only if you know you need it.
+    | Meaning that if you have any clock skew between the signing and
+    | verifying servers you can expand this value to provide some extra
+    | leeway in seconds, so that you consider the token still valid.
     |
     */
 
@@ -217,7 +206,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | In order to invalidate tokens, you must have the blacklist enabled.
-    | If you do not want or need this functionality, then set this to false.
+    | If you do not want or need this functionality you can set this to false.
     |
     */
 
@@ -229,10 +218,13 @@ return [
     | -------------------------------------------------------------------------
     |
     | When multiple concurrent requests are made with the same JWT,
-    | it is possible that some of them fail, due to token regeneration
-    | on every request.
+    | granting an investor some leeway in seconds to allow for any late
+    | arrivals with the same token is sometimes desirable.
     |
-    | Set grace period in seconds to prevent parallel request failure.
+    | In other words, this is the time in seconds that a token is still considered
+    | valid after it has been invalidated.
+    |
+    | Set to 0 to disable the grace period.
     |
     */
 
@@ -240,17 +232,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Cookies encryption
+    | Decrypt Cookies
     |--------------------------------------------------------------------------
     |
-    | By default Laravel encrypt cookies for security reason.
-    | If you decide to not decrypt cookies, you will have to configure Laravel
-    | to not encrypt your cookie token by adding its name into the $except
-    | array available in the middleware "EncryptCookies" provided by Laravel.
-    | see https://laravel.com/docs/master/responses#cookies-and-encryption
-    | for details.
+    | This property determines whether cookies should be decrypted.
     |
-    | Set it to true if you want to decrypt cookies.
+    | If set to false, then the cookie will not be decrypted.
     |
     */
 
@@ -276,7 +263,7 @@ return [
         |
         */
 
-        'jwt' => Lcobucci::class,
+        'jwt' => Tymon\JWTAuth\Providers\JWT\Lcobucci::class,
 
         /*
         |--------------------------------------------------------------------------
@@ -287,7 +274,7 @@ return [
         |
         */
 
-        'auth' => Illuminate::class,
+        'auth' => Tymon\JWTAuth\Providers\Auth\Illuminate::class,
 
         /*
         |--------------------------------------------------------------------------
