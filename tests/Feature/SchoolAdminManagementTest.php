@@ -203,7 +203,6 @@ class SchoolAdminManagementTest extends TestCase
             'school_id' => $this->schoolB->id,
             'class_code' => '8B',
             'ship_name' => 'KRI Nusantara',
-            'school_name' => 'SMP Negeri 2 Nusantara',
         ]);
         $studentB = Student::create([
             'name' => 'Siswa B',

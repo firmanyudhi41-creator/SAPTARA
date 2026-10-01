@@ -60,7 +60,6 @@ class MultiTenantAuthTest extends TestCase
             'school_id' => $this->schoolA->id,
             'class_code' => '7A',
             'ship_name' => 'KRI Bahari',
-            'school_name' => 'SMP Samudra A',
         ]);
 
         $this->studentA = Student::create([

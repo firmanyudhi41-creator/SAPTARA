@@ -150,10 +150,15 @@ class UserSeeder extends Seeder
                 $classCode = 'KLS-'.($c['id'] ?? rand(100, 999));
             }
 
+            $school = School::where('name', $c['school_name'])->firstOrFail();
+            $teacher = Teacher::findOrFail($newTeacherId);
+            $teacher->update(['school_id' => $school->id]);
+            $teacher->user()->update(['school_id' => $school->id, 'role' => 'teacher']);
+
             $schoolClass = SchoolClass::updateOrCreate(
                 [
+                    'school_id' => $school->id,
                     'class_code' => $classCode,
-                    'school_name' => $c['school_name'],
                 ],
                 [
                     'teacher_id' => $newTeacherId,

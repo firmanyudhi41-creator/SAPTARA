@@ -9,7 +9,7 @@ class HabitSeeder extends Seeder
 {
     public function run(): void
     {
-        if (Habit::where('is_custom', false)->count() > 0) {
+        if (Habit::global()->exists()) {
             $this->command->info('Habits already seeded, skipping.');
 
             return;
@@ -26,7 +26,7 @@ class HabitSeeder extends Seeder
         ];
 
         foreach ($habits as $habit) {
-            Habit::create(array_merge($habit, ['is_custom' => false]));
+            Habit::create($habit);
         }
 
         $this->command->info('Seeded 7 habits successfully!');

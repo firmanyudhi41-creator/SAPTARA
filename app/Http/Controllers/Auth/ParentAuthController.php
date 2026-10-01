@@ -91,7 +91,7 @@ class ParentAuthController extends Controller
             return response()->json(['error' => 'Email atau kata sandi salah'], 401);
         }
 
-        $parent = ParentProfile::with(['students.class'])->where('user_id', $user->id)->first();
+        $parent = ParentProfile::with(['students.class.school'])->where('user_id', $user->id)->first();
 
         if (! $parent) {
             // Auto create parent profile if user exists
@@ -142,6 +142,7 @@ class ParentAuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'parent',
         ]);
 
         $parent = ParentProfile::create([
@@ -221,7 +222,7 @@ class ParentAuthController extends Controller
             'success' => true,
             'message' => "Berhasil menautkan {$student->name} ke akun orang tua",
             'student' => $student,
-            'children' => $this->formatChildrenList($parent->students()->with('class')->get()),
+            'children' => $this->formatChildrenList($parent->students()->with('class.school')->get()),
         ]);
     }
 
@@ -230,7 +231,7 @@ class ParentAuthController extends Controller
      */
     public function switchChild(Request $request, int $studentId)
     {
-        $student = Student::with('class')->findOrFail($studentId);
+        $student = Student::with('class.school')->findOrFail($studentId);
 
         return $this->respondWithStudentToken($student, $student->class);
     }
@@ -260,7 +261,7 @@ class ParentAuthController extends Controller
             'class' => $cls ? [
                 'id' => $cls->id,
                 'classCode' => $cls->class_code,
-                'schoolName' => $cls->school?->name ?: $cls->school_name,
+                'schoolName' => $cls->school?->name,
                 'shipName' => $cls->ship_name,
             ] : null,
             'school' => $student->school ? [
@@ -281,7 +282,7 @@ class ParentAuthController extends Controller
             'xp' => $s->xp,
             'classId' => $s->class_id,
             'classCode' => $s->class?->class_code,
-            'schoolName' => $s->class?->school_name,
+            'schoolName' => $s->class?->school?->name,
         ])->values();
     }
 }

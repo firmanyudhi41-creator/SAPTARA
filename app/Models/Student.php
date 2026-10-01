@@ -103,11 +103,6 @@ class Student extends Model implements JWTSubject
         return $this->hasMany(StudentAccessory::class);
     }
 
-    public function weeklySnapshots(): HasMany
-    {
-        return $this->hasMany(WeeklySnapshot::class);
-    }
-
     /**
      * Get ship level based on XP (nautical miles).
      */

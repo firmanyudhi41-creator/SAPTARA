@@ -40,7 +40,7 @@ class SchoolAdminController extends Controller
             ->get();
 
         $classes = SchoolClass::where('school_id', $schoolId)
-            ->with('teacher.user')
+            ->with(['school', 'teacher.user'])
             ->withCount('students')
             ->get();
 
@@ -85,6 +85,7 @@ class SchoolAdminController extends Controller
             'email' => 'nullable|email|max:100',
             'website' => 'nullable|string|max:255',
             'logo' => 'nullable',
+            'stamp' => 'nullable',
         ]);
 
         $logoPath = $school->logo;
@@ -93,6 +94,14 @@ class SchoolAdminController extends Controller
             $logoPath = Storage::url($path);
         } elseif ($request->filled('logo') && is_string($request->logo)) {
             $logoPath = $request->logo;
+        }
+
+        $stampPath = $school->stamp;
+        if ($request->hasFile('stamp') && $request->file('stamp')->isValid()) {
+            $path = $request->file('stamp')->store('schools/stamps', 'public');
+            $stampPath = Storage::url($path);
+        } elseif ($request->filled('stamp') && is_string($request->stamp)) {
+            $stampPath = $request->stamp;
         }
 
         $school->update([
@@ -106,6 +115,7 @@ class SchoolAdminController extends Controller
             'email' => $request->email,
             'website' => $request->website,
             'logo' => $logoPath,
+            'stamp' => $stampPath,
         ]);
 
         return response()->json([
@@ -142,7 +152,18 @@ class SchoolAdminController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'display_name' => 'nullable|string|max:255',
+            'nip' => 'nullable|string|max:50',
+            'title' => 'nullable|string|max:100',
+            'signature' => 'nullable',
         ]);
+
+        $signaturePath = null;
+        if ($request->hasFile('signature') && $request->file('signature')->isValid()) {
+            $path = $request->file('signature')->store('teachers/signatures', 'public');
+            $signaturePath = Storage::url($path);
+        } elseif ($request->filled('signature') && is_string($request->signature)) {
+            $signaturePath = $request->signature;
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -157,6 +178,9 @@ class SchoolAdminController extends Controller
             'user_id' => $user->id,
             'school_id' => $schoolId,
             'display_name' => $request->display_name ?: $request->name,
+            'nip' => $request->nip,
+            'title' => $request->title,
+            'signature' => $signaturePath,
         ]);
 
         $teacher->load('user');
@@ -166,6 +190,50 @@ class SchoolAdminController extends Controller
             'message' => "Guru {$request->name} berhasil ditambahkan ke sekolah!",
             'teacher' => $teacher,
         ], 201);
+    }
+
+    /**
+     * PUT/POST /api/school-admin/teachers/{id}
+     */
+    public function updateTeacher(Request $request, int $id)
+    {
+        $schoolId = $this->getSchoolId($request);
+        $teacher = Teacher::where('school_id', $schoolId)->where('id', $id)->firstOrFail();
+
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'display_name' => 'nullable|string|max:255',
+            'nip' => 'nullable|string|max:50',
+            'title' => 'nullable|string|max:100',
+            'signature' => 'nullable',
+        ]);
+
+        if ($request->filled('name')) {
+            $teacher->user->update(['name' => $request->name]);
+        }
+
+        $signaturePath = $teacher->signature;
+        if ($request->hasFile('signature') && $request->file('signature')->isValid()) {
+            $path = $request->file('signature')->store('teachers/signatures', 'public');
+            $signaturePath = Storage::url($path);
+        } elseif ($request->filled('signature') && is_string($request->signature)) {
+            $signaturePath = $request->signature;
+        }
+
+        $teacher->update([
+            'display_name' => $request->display_name ?: ($request->name ?: $teacher->display_name),
+            'nip' => $request->has('nip') ? $request->nip : $teacher->nip,
+            'title' => $request->has('title') ? $request->title : $teacher->title,
+            'signature' => $signaturePath,
+        ]);
+
+        $teacher->load('user');
+
+        return response()->json([
+            'success' => true,
+            'message' => "Data guru {$teacher->display_name} berhasil diperbarui.",
+            'teacher' => $teacher,
+        ]);
     }
 
     /**
@@ -225,7 +293,7 @@ class SchoolAdminController extends Controller
     {
         $schoolId = $this->getSchoolId($request);
         $classes = SchoolClass::where('school_id', $schoolId)
-            ->with('teacher.user')
+            ->with(['school', 'teacher.user'])
             ->withCount('students')
             ->orderBy('class_code', 'asc')
             ->get();
@@ -239,7 +307,7 @@ class SchoolAdminController extends Controller
     public function createClass(Request $request)
     {
         $schoolId = $this->getSchoolId($request);
-        $school = School::findOrFail($schoolId);
+        School::findOrFail($schoolId);
 
         $request->validate([
             'class_code' => 'required|string|max:50',
@@ -258,14 +326,13 @@ class SchoolAdminController extends Controller
         $class = SchoolClass::create([
             'teacher_id' => $teacher->id,
             'school_id' => $schoolId,
-            'school_name' => $school->name,
             'class_code' => $request->class_code,
             'ship_name' => $request->ship_name ?: "KRI {$request->class_code}",
             'semester' => $request->semester ?: 'Ganjil',
             'tahun_ajaran' => $request->tahun_ajaran ?: '2026/2027',
         ]);
 
-        $class->load('teacher.user');
+        $class->load(['school', 'teacher.user']);
 
         return response()->json([
             'success' => true,

@@ -1,3 +1,19 @@
 {
-    "guidelines": true
+    "agents": [
+        "claude_code",
+        "junie",
+        "codex",
+        "antigravity"
+    ],
+    "cloud": false,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "sail": true,
+    "skills": [
+        "infer-conventions",
+        "laravel-best-practices",
+        "testing-best-practices",
+        "tailwindcss-development"
+    ]
 }

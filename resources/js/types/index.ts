@@ -16,6 +16,7 @@ export interface School {
   email?: string;
   website?: string;
   logo?: string | null;
+  stamp?: string | null;
   isActive?: boolean;
 }
 
@@ -23,6 +24,9 @@ export interface Teacher {
   id: number;
   userId: string;
   displayName: string;
+  nip?: string | null;
+  signature?: string | null;
+  title?: string | null;
   schoolId?: number;
   school?: School;
   createdAt: string;
@@ -91,7 +95,6 @@ export interface Class {
   shipName?: string;
   createdAt?: string;
   teacher_id?: number;
-  school_name?: string;
   class_code?: string;
   ship_name?: string;
   created_at?: string;
@@ -99,7 +102,6 @@ export interface Class {
 }
 
 export interface CreateClassPayload {
-  schoolName: string;
   classCode: string;
   shipName?: string;
 }
@@ -149,8 +151,6 @@ export interface Habit {
   description: string;
   positionX: number;
   positionY: number;
-  is_custom?: boolean;
-  isCustom?: boolean;
   class_id?: number | null;
   created_by_teacher_id?: number | null;
   completions_count?: number;

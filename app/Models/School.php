@@ -25,6 +25,7 @@ class School extends Model
         'email',
         'website',
         'logo',
+        'stamp',
         'is_active',
     ];
 

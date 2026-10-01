@@ -6,101 +6,231 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 1.2cm;
+            margin: 0.8cm 1.2cm 0.8cm 1.2cm;
         }
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            color: #1e293b;
+            color: #0f172a;
             line-height: 1.3;
-            font-size: 10pt;
+            font-size: 8.5pt;
             margin: 0;
             padding: 0;
         }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #0284c7;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+
+        /* Kop Surat Resmi */
+        .kop-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 3px;
         }
-        .header h1 {
+        .kop-table td {
+            vertical-align: middle;
+        }
+        .kop-logo-left {
+            width: 70px;
+            text-align: left;
+        }
+        .kop-logo-right {
+            width: 70px;
+            text-align: right;
+        }
+        .kop-logo-img {
+            max-height: 55px;
+            max-width: 65px;
+            object-fit: contain;
+        }
+        .kop-text {
+            text-align: center;
+            padding: 0 10px;
+        }
+        .kop-instansi {
+            font-size: 8pt;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             margin: 0;
-            font-size: 16pt;
+        }
+        .kop-school-name {
+            font-size: 14pt;
+            font-weight: bold;
             color: #0369a1;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 1px 0;
         }
-        .header p {
-            margin: 2px 0 0 0;
-            font-size: 9.5pt;
-            color: #64748b;
+        .kop-sub {
+            font-size: 8pt;
+            color: #334155;
+        }
+        .kop-divider {
+            border-top: 2px solid #0369a1;
+            border-bottom: 1px solid #0369a1;
+            height: 2px;
+            margin: 4px 0 10px 0;
+        }
+
+        /* Title & Info Bar */
+        .title-bar {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .report-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin: 0;
         }
         .info-bar {
-            margin-bottom: 12px;
-            font-size: 9.5pt;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-bottom: 10px;
+            font-size: 8pt;
         }
+
+        /* Data Table */
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         table.data-table th {
-            background-color: #0284c7;
+            background-color: #0369a1;
             color: #ffffff;
-            font-size: 8.5pt;
+            font-size: 7.5pt;
             text-transform: uppercase;
-            padding: 7px 4px;
-            border: 1px solid #0284c7;
+            padding: 5px 3px;
+            border: 1px solid #0369a1;
             text-align: center;
+            letter-spacing: 0.3px;
         }
         table.data-table td {
-            padding: 6px 5px;
+            padding: 4px 4px;
             border: 1px solid #cbd5e1;
-            font-size: 8.5pt;
+            font-size: 8pt;
         }
         table.data-table tr:nth-child(even) {
             background-color: #f8fafc;
         }
-        .footer {
-            margin-top: 15px;
-            text-align: right;
+
+        /* Signature block */
+        .sig-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+        .sig-table td {
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
             font-size: 8pt;
+        }
+        .sig-container {
+            position: relative;
+            height: 45px;
+            margin: 2px auto;
+            width: 180px;
+        }
+        .sig-img {
+            max-height: 40px;
+            max-width: 120px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        .stamp-img {
+            position: absolute;
+            top: -8px;
+            left: 20px;
+            max-height: 50px;
+            max-width: 50px;
+            opacity: 0.85;
+            object-fit: contain;
+            z-index: 10;
+        }
+
+        .footer {
+            margin-top: 8px;
+            text-align: right;
+            font-size: 7pt;
             color: #94a3b8;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>Rekapitulasi Pelayaran Pembiasaan Kelas</h1>
-        <p>{{ $class->school_name ?? $class->schoolName }} — Kelas {{ $class->class_code ?? $class->classCode }} (Kapal "{{ $class->ship_name ?? $class->shipName ?? 'Saptara' }}")</p>
+    <!-- KOP RESMI SEKOLAH -->
+    <table class="kop-table">
+        <tr>
+            <td class="kop-logo-left">
+                @if(!empty($schoolLogoBase64))
+                    <img src="{{ $schoolLogoBase64 }}" class="kop-logo-img" alt="Logo Sekolah">
+                @else
+                    <div style="width: 45px; height: 45px; border-radius: 50%; background-color: #0369a1; color: #fff; text-align: center; line-height: 45px; font-size: 16pt;">
+                        🏫
+                    </div>
+                @endif
+            </td>
+            <td class="kop-text">
+                <div class="kop-instansi">DINAS PENDIDIKAN DAN KEBUDAYAAN</div>
+                <div class="kop-school-name">{{ $school?->name ?? 'SEKOLAH SAPTARA' }}</div>
+                <div class="kop-sub">
+                    NPSN: {{ $school?->npsn ?? '-' }}@if(!empty($school?->address)) | {{ $school->address }}@endif @if(!empty($school?->city)), {{ $school->city }}@endif
+                </div>
+            </td>
+            <td class="kop-logo-right">
+                @if(!empty($saptaraLogoBase64))
+                    <img src="{{ $saptaraLogoBase64 }}" class="kop-logo-img" alt="Lambang SAPTARA">
+                @else
+                    <div style="width: 45px; height: 45px; border-radius: 50%; background-color: #0284c7; color: #fff; text-align: center; line-height: 45px; font-size: 16pt;">
+                        🧭
+                    </div>
+                @endif
+            </td>
+        </tr>
+    </table>
+
+    <div class="kop-divider"></div>
+
+    <div class="title-bar">
+        <h1 class="report-title">Rekapitulasi Pelayaran Pembiasaan Karakter Kelas</h1>
+        <div style="font-size: 8pt; color: #64748b;">
+            Armada Kapal: "{{ $class->ship_name ?? $class->shipName ?? 'Saptara' }}" &bull; Kelas {{ $class->class_code ?? $class->classCode }}
+        </div>
     </div>
 
     <div class="info-bar">
-        <strong>Guru Pembina:</strong> {{ $teacher->display_name ?? $teacher->displayName ?? 'Guru Kelas' }} | 
-        <strong>Total Siswa:</strong> {{ count($students) }} siswa | 
-        <strong>Semester / TA:</strong> {{ $class->semester ?? 'Ganjil' }} {{ $class->tahun_ajaran ?? '2026/2027' }} |
-        <strong>Tanggal Cetak:</strong> {{ date('d/m/Y') }}
+        <strong>Guru Pembina:</strong> {{ $teacher?->display_name ?? 'Guru Kelas' }}{{ !empty($teacher?->title) ? ', ' . $teacher->title : '' }} &bull;
+        <strong>Total Siswa:</strong> {{ count($students) }} awak &bull;
+        <strong>Semester / TA:</strong> {{ $class->semester ?? 'Ganjil' }} {{ $class->tahun_ajaran ?? '2026/2027' }} &bull;
+        <strong>Tanggal Dokumen:</strong> {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}
     </div>
 
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 3%;">No</th>
-                <th style="width: 18%; text-align: left;">Nama Siswa</th>
-                <th style="width: 12%;">Level Kapal</th>
+                <th style="width: 17%; text-align: left;">Nama Siswa</th>
+                <th style="width: 8%;">NIS</th>
+                <th style="width: 12%;">Tingkat Kapal</th>
                 <th style="width: 8%;">Streak</th>
                 <th style="width: 10%;">Mil (XP)</th>
-                <th style="width: 9%;">Koin</th>
+                <th style="width: 8%;">Koin</th>
                 <th style="width: 10%;">Jurnal Foto</th>
                 <th style="width: 10%;">Ceklis Habit</th>
-                <th style="width: 10%;">Lencana</th>
-                <th style="width: 10%;">Status</th>
+                <th style="width: 6%;">Lencana</th>
+                <th style="width: 8%;">Status</th>
             </tr>
         </thead>
         <tbody>
             @foreach($students as $idx => $s)
                 <tr>
                     <td style="text-align: center;">{{ $idx + 1 }}</td>
-                    <td><strong>{{ $s->name }}</strong></td>
+                    <td><strong>{{ $s->name }}</strong> ({{ $s->avatar ?? '👦' }})</td>
+                    <td style="text-align: center; color: #475569;">{{ $s->nis ?? '-' }}</td>
                     <td style="text-align: center;">{{ $s->ship_level['name'] ?? 'Pelaut Pemula' }}</td>
                     <td style="text-align: center; font-weight: bold; color: #d97706;">{{ $s->streak ?? 0 }} hari</td>
                     <td style="text-align: center; font-weight: bold; color: #0284c7;">{{ number_format($s->xp ?? 0) }}</td>
@@ -122,8 +252,34 @@
         </tbody>
     </table>
 
+    <table class="sig-table">
+        <tr>
+            <td>
+                Mengetahui,<br>
+                Kepala Sekolah
+                <div class="sig-container">
+                    @if(!empty($schoolStampBase64))
+                        <img src="{{ $schoolStampBase64 }}" class="stamp-img" alt="Stempel Sekolah">
+                    @endif
+                </div>
+                <strong>( ________________________________ )</strong>
+            </td>
+            <td>
+                {{ $school?->city ?? 'Nusantara' }}, {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}<br>
+                Guru Kelas / Pembina Karakter
+                <div class="sig-container">
+                    @if(!empty($teacherSignatureBase64))
+                        <img src="{{ $teacherSignatureBase64 }}" class="sig-img" alt="Tanda Tangan Guru">
+                    @endif
+                </div>
+                <strong>{{ $teacher?->display_name ?? 'Bapak/Ibu Guru' }}{{ !empty($teacher?->title) ? ', ' . $teacher->title : '' }}</strong><br>
+                <span style="font-size: 7.5pt; color: #475569;">NIP. {{ $teacher?->nip ?? '-' }}</span>
+            </td>
+        </tr>
+    </table>
+
     <div class="footer">
-        Dicetak dari Aplikasi SAPTARA Kemaritiman Karakter — {{ date('d F Y, H:i') }} WIB
+        Dicetak dari Aplikasi SAPTARA Karakter Kemaritiman &bull; {{ date('d F Y, H:i') }} WIB
     </div>
 
 </body>

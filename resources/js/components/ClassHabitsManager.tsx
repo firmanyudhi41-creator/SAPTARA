@@ -118,8 +118,8 @@ export function ClassHabitsManager({ classId, classCode }: ClassHabitsManagerPro
     }
   };
 
-  const globalHabits = habits?.filter((h) => !h.is_custom && !h.isCustom) ?? [];
-  const customHabits = habits?.filter((h) => h.is_custom || h.isCustom) ?? [];
+  const globalHabits = habits?.filter((habit) => habit.class_id == null) ?? [];
+  const customHabits = habits?.filter((habit) => habit.class_id != null) ?? [];
 
   return (
     <>
