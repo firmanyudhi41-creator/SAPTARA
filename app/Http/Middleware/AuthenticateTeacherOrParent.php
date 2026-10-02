@@ -16,7 +16,8 @@ class AuthenticateTeacherOrParent
     public function handle(Request $request, Closure $next): Response
     {
         // Try Sanctum teacher first
-        if ($request->user()) {
+        if ($user = auth('sanctum')->user() ?: $request->user()) {
+            $request->setUserResolver(fn () => $user);
             return $next($request);
         }
 

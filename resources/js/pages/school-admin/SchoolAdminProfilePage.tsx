@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Save,
 } from "lucide-react";
+import { resizeImage } from "../../lib/image";
 
 export function SchoolAdminProfilePage() {
   const [school, setSchool] = useState<School | null>(null);
@@ -64,19 +65,33 @@ export function SchoolAdminProfilePage() {
     fetchProfile();
   }, []);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
-      setLogoPreview(URL.createObjectURL(file));
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setLogoFile(resized);
+        setLogoPreview(URL.createObjectURL(resized));
+      } catch (err) {
+        console.error("Gagal mengubah ukuran gambar logo:", err);
+        setLogoFile(file);
+        setLogoPreview(URL.createObjectURL(file));
+      }
     }
   };
 
-  const handleStampChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStampChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setStampFile(file);
-      setStampPreview(URL.createObjectURL(file));
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setStampFile(resized);
+        setStampPreview(URL.createObjectURL(resized));
+      } catch (err) {
+        console.error("Gagal mengubah ukuran gambar stempel:", err);
+        setStampFile(file);
+        setStampPreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -182,7 +197,7 @@ export function SchoolAdminProfilePage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="block text-xs font-bold text-slate-800">Logo Resmi Sekolah</span>
-                  <span className="block text-[11px] text-slate-500">Tampil di Kop Surat & Raport Siswa</span>
+                  <span className="block text-[11px] text-slate-500">Tampil di Kop Surat & Raport Siswa (Maks. 800x800 px)</span>
                 </div>
               </div>
 
@@ -207,7 +222,7 @@ export function SchoolAdminProfilePage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="block text-xs font-bold text-slate-800">Stempel Resmi Sekolah</span>
-                  <span className="block text-[11px] text-slate-500">Format PNG transparan untuk kolom pengesahan raport</span>
+                  <span className="block text-[11px] text-slate-500">Format PNG transparan untuk kolom pengesahan raport (Maks. 800x800 px)</span>
                 </div>
               </div>
             </div>
@@ -366,4 +381,3 @@ export function SchoolAdminProfilePage() {
     </div>
   );
 }
-

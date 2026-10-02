@@ -11,9 +11,9 @@ services:
         environment:
             WWWUSER: '${WWWUSER:-1000}'
             LARAVEL_SAIL: 1
-            DB_CONNECTION: mysql
-            DB_HOST: mysql
-            DB_PORT: 3306
+            DB_CONNECTION: '${DB_CONNECTION:-mysql}'
+            DB_HOST: '${DB_HOST:-mysql}'
+            DB_PORT: '${DB_PORT:-3306}'
             DB_DATABASE: '${DB_DATABASE:-saptara}'
             DB_USERNAME: '${DB_USERNAME:-sail}'
             DB_PASSWORD: '${DB_PASSWORD:-password}'
@@ -44,7 +44,7 @@ services:
             sail:
                 ipv4_address: 172.21.0.19
         healthcheck:
-            test: [ 'CMD-SHELL', 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP -h 127.0.0.1 -u"$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null' ]
+            test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD:-password}"]
             interval: 5s
             timeout: 5s
             retries: 20

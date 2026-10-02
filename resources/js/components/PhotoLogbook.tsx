@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import confetti from "canvas-confetti";
-import { Camera, Upload, CheckCircle2, Clock, AlertCircle, Sparkles, MessageCircle } from "lucide-react";
+import { Camera, Upload, CheckCircle2, Clock, AlertCircle, Sparkles, MessageCircle, Loader2 } from "lucide-react";
 import { useHabits } from "../hooks/use-habits";
 import { useStudentLogbook, useSubmitLogbook } from "../hooks/use-logbook";
 import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/Card";
 import { Badge } from "./ui/Badge";
 import { formatDateIndo } from "../lib/utils";
+import { resizeImage } from "../lib/image";
 
 interface PhotoLogbookProps {
   studentId: number;
@@ -25,6 +26,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
   const [caption, setCaption] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,13 +39,25 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
     }
   }, [preselectedHabitId, habits]);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setPhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
+      setIsResizing(true);
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setPhotoFile(resized);
+        const reader = new FileReader();
+        reader.onload = () => setPhotoPreview(reader.result as string);
+        reader.readAsDataURL(resized);
+      } catch (err) {
+        console.error("Gagal mengubah ukuran gambar:", err);
+        setPhotoFile(file);
+        const reader = new FileReader();
+        reader.onload = () => setPhotoPreview(reader.result as string);
+        reader.readAsDataURL(file);
+      } finally {
+        setIsResizing(false);
+      }
     }
   };
 
@@ -163,14 +177,18 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
                 </div>
               ) : (
                 <div
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => !isResizing && fileInputRef.current?.click()}
                   className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-6 text-center hover:bg-sky-50/50 hover:border-sky-300 transition-all cursor-pointer"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-sky-600 mb-2">
-                    <Camera className="h-6 w-6" />
+                    {isResizing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
                   </div>
-                  <p className="text-xs font-bold text-slate-700">Klik untuk ambil foto atau pilih gambar</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Mendukung format JPG, PNG (maksimal 5MB)</p>
+                  <p className="text-xs font-bold text-slate-700">
+                    {isResizing ? "Mengoptimalkan ukuran gambar..." : "Klik untuk ambil foto atau pilih gambar"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Mendukung JPG, PNG (otomatis disesuaikan maks. 800x800 px)
+                  </p>
                 </div>
               )}
 
@@ -180,6 +198,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
                 accept="image/*"
                 onChange={handlePhotoChange}
                 className="hidden"
+                disabled={isResizing}
               />
             </div>
 
@@ -201,7 +220,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
             <div className="flex justify-end pt-2">
               <Button
                 type="submit"
-                disabled={submitMutation.isPending}
+                disabled={submitMutation.isPending || isResizing}
                 variant="gold"
                 size="lg"
                 className="w-full sm:w-auto"

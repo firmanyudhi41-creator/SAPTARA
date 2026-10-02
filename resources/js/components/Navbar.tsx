@@ -50,6 +50,12 @@ export function Navbar() {
     navigate("/");
   };
 
+  const teacherDisplayName =
+    (teacherInfo as any)?.displayName ||
+    (teacherInfo as any)?.display_name ||
+    teacherInfo?.name ||
+    "Bapak/Ibu Guru";
+
   return (
     <>
       {/* Top Desktop & Tablet Header */}
@@ -94,7 +100,7 @@ export function Navbar() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500">Guru:</span>
               <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800">
-                👨‍🏫 {teacherInfo?.name || "Bapak/Ibu Guru"}
+                🧑‍🏫 {teacherDisplayName}
               </span>
             </div>
           )}
@@ -114,13 +120,13 @@ export function Navbar() {
                 >
                   {parentInfo.children.map((child) => (
                     <option key={child.id} value={child.id}>
-                      {child.avatar || "🧒"} {child.name} ({child.className || child.classCode})
+                      {child.avatar || "🧑"} {child.name} ({child.className || child.classCode})
                     </option>
                   ))}
                 </select>
               ) : (
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
-                  {parentInfo?.studentAvatar || "🧒"} {parentInfo?.studentName || "Siswa"}
+                  {parentInfo?.studentAvatar || "🧑"} {parentInfo?.studentName || "Siswa"}
                 </span>
               )}
             </div>
@@ -156,7 +162,7 @@ export function Navbar() {
 
             {isTeacher && (
               <>
-                <NavLink to="/teacher/feed" icon={<ClipboardCheck className="h-4 w-4" />} label="Beranda Jurnal" currentPath={location.pathname} />
+                <NavLink to="/teacher/feed" icon={<ClipboardCheck className="h-4 w-4" />} label="Verifikasi & Approval" currentPath={location.pathname} />
                 <NavLink to="/teacher/analytics" icon={<BarChart3 className="h-4 w-4" />} label="Analitik Kelas" currentPath={location.pathname} />
                 <NavLink to="/teacher/rewards" icon={<Award className="h-4 w-4" />} label="Hadiah & Piagam" currentPath={location.pathname} />
                 <NavLink to="/teacher/crew" icon={<Users className="h-4 w-4" />} label="Daftar Siswa" currentPath={location.pathname} />

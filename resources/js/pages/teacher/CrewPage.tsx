@@ -35,6 +35,7 @@ import { ClassHabitsManager } from "../../components/ClassHabitsManager";
 import { ClassMissionManager } from "../../components/ClassMissionManager";
 import { authService } from "../../services/auth.service";
 import { useTeacherInfo } from "../../hooks/use-auth";
+import { resizeImage } from "../../lib/image";
 
 const AVATARS = ["🧒", "👧", "👦", "🧒🏻", "👧🏻", "👦🏻", "🧑‍🦱", "👩‍🦰", "🧑‍🎓"];
 
@@ -278,11 +279,18 @@ export function CrewPage() {
     setProfileModal(true);
   };
 
-  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSignatureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSignatureFile(file);
-      setSignaturePreview(URL.createObjectURL(file));
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setSignatureFile(resized);
+        setSignaturePreview(URL.createObjectURL(resized));
+      } catch (err) {
+        console.error("Gagal mengubah ukuran tanda tangan:", err);
+        setSignatureFile(file);
+        setSignaturePreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -1315,7 +1323,7 @@ export function CrewPage() {
                     />
                   </label>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Gunakan foto/scan tanda tangan pada kertas putih atau file PNG transparan.
+                    Gunakan foto/scan tanda tangan pada kertas putih atau file PNG transparan (otomatis disesuaikan maks. 800x800 px).
                   </p>
                 </div>
               </div>
