@@ -17,11 +17,16 @@ class Teacher extends Model
         'title',
     ];
 
-    protected $appends = ['displayName'];
+    protected $appends = ['displayName', 'name'];
 
     public function getDisplayNameAttribute(): string
     {
         return $this->attributes['display_name'] ?? '';
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->attributes['display_name'] ?? $this->user?->name ?? '';
     }
 
     public function user(): BelongsTo

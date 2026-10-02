@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/Input";
 import { adminService } from "../../services/admin.service";
 import type { School } from "../../types";
 import { Building2, Upload, AlertCircle, CheckCircle2, Image as ImageIcon, X } from "lucide-react";
+import { resizeImage } from "../../lib/image";
 
 interface AdminSchoolFormModalProps {
   open: boolean;
@@ -72,15 +73,26 @@ export function AdminSchoolFormModal({
     setErrorMsg(null);
   }, [schoolToEdit, open]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setLogoFile(resized);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setLogoPreview(reader.result as string);
+        };
+        reader.readAsDataURL(resized);
+      } catch (err) {
+        console.error("Gagal mengubah ukuran gambar:", err);
+        setLogoFile(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setLogoPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -208,7 +220,7 @@ export function AdminSchoolFormModal({
                 className="block w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-100 file:text-sky-800 hover:file:bg-sky-200 cursor-pointer"
               />
               <p className="text-[10px] text-slate-400 mt-1">
-                Format: PNG, JPG, WebP, SVG. Maks 2 MB.
+                Format: PNG, JPG, WebP, SVG (otomatis disesuaikan maks. 800x800 px).
               </p>
             </div>
             {logoPreview && (
@@ -358,4 +370,3 @@ export function AdminSchoolFormModal({
     </Dialog>
   );
 }
-

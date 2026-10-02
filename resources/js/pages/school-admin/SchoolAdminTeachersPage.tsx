@@ -18,6 +18,7 @@ import {
   PenTool,
   Upload,
 } from "lucide-react";
+import { resizeImage } from "../../lib/image";
 
 export function SchoolAdminTeachersPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -128,11 +129,18 @@ export function SchoolAdminTeachersPage() {
     setEditModal(true);
   };
 
-  const handleEditSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditSignatureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setEditSignatureFile(file);
-      setEditSignaturePreview(URL.createObjectURL(file));
+      try {
+        const resized = await resizeImage(file, 800, 800);
+        setEditSignatureFile(resized);
+        setEditSignaturePreview(URL.createObjectURL(resized));
+      } catch (err) {
+        console.error("Gagal mengubah ukuran gambar tanda tangan:", err);
+        setEditSignatureFile(file);
+        setEditSignaturePreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -525,7 +533,7 @@ export function SchoolAdminTeachersPage() {
                   />
                 </label>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Format PNG transparan disarankan untuk raport.
+                  Format PNG transparan disarankan untuk raport (otomatis disesuaikan maks. 800x800 px).
                 </p>
               </div>
             </div>
@@ -544,4 +552,3 @@ export function SchoolAdminTeachersPage() {
     </div>
   );
 }
-
