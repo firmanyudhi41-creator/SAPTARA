@@ -11,40 +11,46 @@ use Illuminate\Http\Request;
 
 class HabitController extends Controller
 {
-    /** GET /api/habits — Semua habit (global + custom untuk kelas) */
+    /** GET /api/habits \u2014 Daftar kebiasaan untuk siswa (7 pokok + kebiasaan khusus kelas) */
     public function index(Request $request)
     {
-        $classId = $request->query('class_id');
+        $studentId = $request->_student_id;
+        $student = $studentId ? Student::find($studentId) : null;
+        $classId = $student?->class_id ?? $request->query('class_id');
 
-        $query = $classId
-            ? Habit::forClass((int) $classId)
-            : Habit::global();
+        // 7 kebiasaan pokok (class_id IS NULL) + kebiasaan kelas siswa
+        $habits = Habit::whereNull('class_id')
+            ->when($classId, fn ($q) => $q->orWhere('class_id', $classId))
+            ->orderBy('id')
+            ->get();
 
-        $habits = $query->withCount(['completions', 'logbookEntries'])->get();
-
-        return response()->json($habits);
-    }
-
-    /** GET /api/habits/missions/{studentId} — Misi hari ini (termasuk custom habit kelas) */
-    public function todayMissions(int $studentId)
-    {
-        $student = Student::find($studentId);
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
-        $habits = ($student && $student->class_id)
-            ? Habit::forClass($student->class_id)->get()
-            : Habit::global()->get();
+        $completionsToday = [];
+        if ($studentId) {
+            $completionsToday = HabitCompletion::where('student_id', $studentId)
+                ->where('date', $today)
+                ->pluck('habit_id')
+                ->toArray();
+        }
 
-        $doneIds = HabitCompletion::where('student_id', $studentId)
-            ->where('date', $today)
-            ->pluck('habit_id');
-
-        $missions = $habits->map(fn ($h) => [
-            'habit' => $h,
-            'completed' => $doneIds->contains($h->id),
+        $result = $habits->map(fn ($h) => [
+            'id' => $h->id,
+            'name' => $h->name,
+            'description' => $h->description,
+            'icon' => $h->icon,
+            'island' => $h->island,
+            'badge' => $h->badge,
+            'badge_icon' => $h->badge_icon,
+            'color' => $h->color,
+            'position_x' => $h->position_x,
+            'position_y' => $h->position_y,
+            'is_custom' => $h->class_id !== null,
+            'class_id' => $h->class_id,
+            'completed_today' => in_array($h->id, $completionsToday),
         ]);
 
-        return response()->json($missions);
+        return response()->json($result);
     }
 
     /** POST /api/habits/toggle — Toggle penyelesaian habit hari ini */
@@ -64,10 +70,28 @@ class HabitController extends Controller
         if ($existing) {
             // Batalkan penyelesaian
             $existing->delete();
-            Student::where('id', $studentId)->decrement('xp', 10);
-            Student::where('id', $studentId)->decrement('coins', 5);
+            $student = Student::find($studentId);
+            if ($student) {
+                $student->decrement('xp', 10);
+                $student->decrement('coins', 5);
 
-            return response()->json(['action' => 'uncompleted', 'habit_id' => $habitId]);
+                // Cek apakah masih ada aktivitas lain hari ini (habit lain atau logbook)
+                $hasOtherActivityToday = HabitCompletion::where('student_id', $studentId)
+                    ->where('date', $today)
+                    ->exists() || LogbookEntry::where('student_id', $studentId)
+                    ->where('date', $today)
+                    ->exists();
+
+                if (! $hasOtherActivityToday) {
+                    $student->recalculateStreak();
+                }
+            }
+
+            return response()->json([
+                'action' => 'uncompleted',
+                'habit_id' => $habitId,
+                'streak' => $student?->streak ?? 0,
+            ]);
         }
 
         // Catat penyelesaian
@@ -81,8 +105,8 @@ class HabitController extends Controller
         $student->increment('xp', 10);
         $student->increment('coins', 5);
 
-        // Update streak & cek milestone reward
-        $milestoneReward = $this->updateStreakAndCheckMilestone($student, $today);
+        // Update streak & cek milestone reward secara terpusat
+        $milestoneReward = $student->recordDailyActivity($today);
 
         return response()->json([
             'action' => 'completed',
@@ -181,67 +205,5 @@ class HabitController extends Controller
         $habit->delete();
 
         return response()->json(['message' => 'Kebiasaan kelas berhasil dihapus']);
-    }
-
-    /**
-     * Hitung streak & cek apakah menyentuh milestone 7, 14, atau 30 hari
-     */
-    private function updateStreakAndCheckMilestone(Student $student, string $today): ?array
-    {
-        $lastActive = $student->last_active_date ? Carbon::parse($student->last_active_date)->toDateString() : null;
-        $yesterday = Carbon::now('Asia/Jakarta')->subDay()->toDateString();
-
-        $streakIncreased = false;
-
-        if ($lastActive === $yesterday) {
-            $student->increment('streak');
-            $student->refresh();
-            $streakIncreased = true;
-        } elseif ($lastActive !== $today) {
-            $student->streak = 1;
-            $student->save();
-            $student->refresh();
-            $streakIncreased = true;
-        }
-
-        $student->last_active_date = $today;
-        $student->save();
-
-        if (! $streakIncreased) {
-            return null;
-        }
-
-        // Evaluasi Milestone Streak
-        $milestone = null;
-        if ($student->streak === 7) {
-            $student->increment('xp', 50);
-            $student->increment('coins', 20);
-            $milestone = [
-                'days' => 7,
-                'bonus_xp' => 50,
-                'bonus_coins' => 20,
-                'title' => 'Pekan Bahari (7 Hari Berturut-turut)!',
-            ];
-        } elseif ($student->streak === 14) {
-            $student->increment('xp', 100);
-            $student->increment('coins', 50);
-            $milestone = [
-                'days' => 14,
-                'bonus_xp' => 100,
-                'bonus_coins' => 50,
-                'title' => 'Pelaut Tangguh (14 Hari Berturut-turut)!',
-            ];
-        } elseif ($student->streak === 30) {
-            $student->increment('xp', 250);
-            $student->increment('coins', 150);
-            $milestone = [
-                'days' => 30,
-                'bonus_xp' => 250,
-                'bonus_coins' => 150,
-                'title' => 'Nakhoda Samudra (30 Hari Berturut-turut)!',
-            ];
-        }
-
-        return $milestone;
     }
 }
