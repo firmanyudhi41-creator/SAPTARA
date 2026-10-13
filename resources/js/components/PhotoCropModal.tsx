@@ -9,12 +9,9 @@ import {
   Check,
   Smartphone,
   Monitor,
-  Sparkles,
   Loader2,
 } from "lucide-react";
 import {
-  TARGET_PHOTO_WIDTH,
-  TARGET_PHOTO_HEIGHT,
   TARGET_ASPECT_RATIO,
   cropAndExportTo960x1280,
   ImageMeta,
@@ -118,137 +115,147 @@ export function PhotoCropModal({
 
   // Redraw preview canvas
   const drawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-    if (!canvas || !img || !imageLoaded) return;
+    try {
+      const canvas = canvasRef.current;
+      const img = imageRef.current;
+      if (!canvas || !img || !imageLoaded) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+      const width = canvas.width;
+      const height = canvas.height;
 
-    // Clear background
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#0f172a"; // slate-900
-    ctx.fillRect(0, 0, width, height);
+      // Clear background
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#0f172a"; // slate-900
+      ctx.fillRect(0, 0, width, height);
 
-    const isSwapped = (rotation % 180 !== 0);
-    const effW = isSwapped ? (img.naturalHeight || img.height) : (img.naturalWidth || img.width);
-    const effH = isSwapped ? (img.naturalWidth || img.width) : (img.naturalHeight || img.height);
+      const isSwapped = (rotation % 180 !== 0);
+      const effW = isSwapped ? (img.naturalHeight || img.height) : (img.naturalWidth || img.width);
+      const effH = isSwapped ? (img.naturalWidth || img.width) : (img.naturalHeight || img.height);
 
-    const baseScale = Math.max(CROP_BOX_WIDTH / effW, CROP_BOX_HEIGHT / effH);
-    const rendW = effW * baseScale * zoom;
-    const rendH = effH * baseScale * zoom;
+      if (!effW || !effH) return;
 
-    const cropBoxX = (width - CROP_BOX_WIDTH) / 2;
-    const cropBoxY = (height - CROP_BOX_HEIGHT) / 2;
+      const baseScale = Math.max(CROP_BOX_WIDTH / effW, CROP_BOX_HEIGHT / effH);
+      const rendW = effW * baseScale * zoom;
+      const rendH = effH * baseScale * zoom;
 
-    const centerX = cropBoxX + (CROP_BOX_WIDTH / 2) + pan.x;
-    const centerY = cropBoxY + (CROP_BOX_HEIGHT / 2) + pan.y;
+      const cropBoxX = (width - CROP_BOX_WIDTH) / 2;
+      const cropBoxY = (height - CROP_BOX_HEIGHT) / 2;
 
-    const drawW = isSwapped ? rendH : rendW;
-    const drawH = isSwapped ? rendW : rendH;
+      const centerX = cropBoxX + (CROP_BOX_WIDTH / 2) + pan.x;
+      const centerY = cropBoxY + (CROP_BOX_HEIGHT / 2) + pan.y;
 
-    // 1. Draw entire image dimmed outside the crop box
-    ctx.save();
-    ctx.globalAlpha = 0.32;
-    ctx.translate(centerX, centerY);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-    ctx.restore();
+      const drawW = isSwapped ? rendH : rendW;
+      const drawH = isSwapped ? rendW : rendH;
 
-    // 2. Draw sharp, full-brightness image clipped strictly inside 3:4 crop box
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cropBoxX, cropBoxY, CROP_BOX_WIDTH, CROP_BOX_HEIGHT);
-    ctx.clip();
+      // 1. Draw entire image dimmed outside the crop box
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.translate(centerX, centerY);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
 
-    ctx.translate(centerX, centerY);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-    ctx.restore();
+      // 2. Draw sharp, full-brightness image clipped strictly inside 3:4 crop box
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cropBoxX, cropBoxY, CROP_BOX_WIDTH, CROP_BOX_HEIGHT);
+      ctx.clip();
 
-    // 3. Draw Rule-of-Thirds Grid inside crop box
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+      ctx.translate(centerX, centerY);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
 
-    const thirdW = CROP_BOX_WIDTH / 3;
-    const thirdH = CROP_BOX_HEIGHT / 3;
+      // 3. Draw Rule-of-Thirds Grid inside crop box
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
 
-    // Vertical grid lines
-    ctx.beginPath();
-    ctx.moveTo(cropBoxX + thirdW, cropBoxY);
-    ctx.lineTo(cropBoxX + thirdW, cropBoxY + CROP_BOX_HEIGHT);
-    ctx.moveTo(cropBoxX + thirdW * 2, cropBoxY);
-    ctx.lineTo(cropBoxX + thirdW * 2, cropBoxY + CROP_BOX_HEIGHT);
-    // Horizontal grid lines
-    ctx.moveTo(cropBoxX, cropBoxY + thirdH);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + thirdH);
-    ctx.moveTo(cropBoxX, cropBoxY + thirdH * 2);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + thirdH * 2);
-    ctx.stroke();
-    ctx.restore();
+      const thirdW = CROP_BOX_WIDTH / 3;
+      const thirdH = CROP_BOX_HEIGHT / 3;
 
-    // 4. Draw outer border of the crop box
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cropBoxX, cropBoxY, CROP_BOX_WIDTH, CROP_BOX_HEIGHT);
+      // Vertical grid lines
+      ctx.beginPath();
+      ctx.moveTo(cropBoxX + thirdW, cropBoxY);
+      ctx.lineTo(cropBoxX + thirdW, cropBoxY + CROP_BOX_HEIGHT);
+      ctx.moveTo(cropBoxX + thirdW * 2, cropBoxY);
+      ctx.lineTo(cropBoxX + thirdW * 2, cropBoxY + CROP_BOX_HEIGHT);
+      // Horizontal grid lines
+      ctx.moveTo(cropBoxX, cropBoxY + thirdH);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + thirdH);
+      ctx.moveTo(cropBoxX, cropBoxY + thirdH * 2);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + thirdH * 2);
+      ctx.stroke();
+      ctx.restore();
 
-    // 5. Draw prominent corner accents (Sky-400 / Cyan)
-    const cornerSize = 18;
-    ctx.strokeStyle = "#38bdf8"; // sky-400
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = "round";
+      // 4. Draw outer border of the crop box
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cropBoxX, cropBoxY, CROP_BOX_WIDTH, CROP_BOX_HEIGHT);
 
-    // Top-Left
-    ctx.beginPath();
-    ctx.moveTo(cropBoxX, cropBoxY + cornerSize);
-    ctx.lineTo(cropBoxX, cropBoxY);
-    ctx.lineTo(cropBoxX + cornerSize, cropBoxY);
-    ctx.stroke();
+      // 5. Draw prominent corner accents (Sky-400 / Cyan)
+      const cornerSize = 18;
+      ctx.strokeStyle = "#38bdf8"; // sky-400
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
 
-    // Top-Right
-    ctx.beginPath();
-    ctx.moveTo(cropBoxX + CROP_BOX_WIDTH - cornerSize, cropBoxY);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + cornerSize);
-    ctx.stroke();
+      // Top-Left
+      ctx.beginPath();
+      ctx.moveTo(cropBoxX, cropBoxY + cornerSize);
+      ctx.lineTo(cropBoxX, cropBoxY);
+      ctx.lineTo(cropBoxX + cornerSize, cropBoxY);
+      ctx.stroke();
 
-    // Bottom-Left
-    ctx.beginPath();
-    ctx.moveTo(cropBoxX, cropBoxY + CROP_BOX_HEIGHT - cornerSize);
-    ctx.lineTo(cropBoxX, cropBoxY + CROP_BOX_HEIGHT);
-    ctx.lineTo(cropBoxX + cornerSize, cropBoxY + CROP_BOX_HEIGHT);
-    ctx.stroke();
+      // Top-Right
+      ctx.beginPath();
+      ctx.moveTo(cropBoxX + CROP_BOX_WIDTH - cornerSize, cropBoxY);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + cornerSize);
+      ctx.stroke();
 
-    // Bottom-Right
-    ctx.beginPath();
-    ctx.moveTo(cropBoxX + CROP_BOX_WIDTH - cornerSize, cropBoxY + CROP_BOX_HEIGHT);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + CROP_BOX_HEIGHT);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + CROP_BOX_HEIGHT - cornerSize);
-    ctx.stroke();
+      // Bottom-Left
+      ctx.beginPath();
+      ctx.moveTo(cropBoxX, cropBoxY + CROP_BOX_HEIGHT - cornerSize);
+      ctx.lineTo(cropBoxX, cropBoxY + CROP_BOX_HEIGHT);
+      ctx.lineTo(cropBoxX + cornerSize, cropBoxY + CROP_BOX_HEIGHT);
+      ctx.stroke();
 
-    // 6. Badge label indicating target ratio inside preview
-    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
-    ctx.beginPath();
-    const badgeW = 96;
-    const badgeH = 20;
-    const badgeX = cropBoxX + (CROP_BOX_WIDTH - badgeW) / 2;
-    const badgeY = cropBoxY + 8;
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 10);
-    ctx.fill();
+      // Bottom-Right
+      ctx.beginPath();
+      ctx.moveTo(cropBoxX + CROP_BOX_WIDTH - cornerSize, cropBoxY + CROP_BOX_HEIGHT);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + CROP_BOX_HEIGHT);
+      ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + CROP_BOX_HEIGHT - cornerSize);
+      ctx.stroke();
 
-    ctx.fillStyle = "#38bdf8";
-    ctx.font = "bold 10px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("960 × 1280 (3:4)", cropBoxX + CROP_BOX_WIDTH / 2, badgeY + badgeH / 2);
+      // 6. Badge label indicating target ratio inside preview
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.beginPath();
+      const badgeW = 96;
+      const badgeH = 20;
+      const badgeX = cropBoxX + (CROP_BOX_WIDTH - badgeW) / 2;
+      const badgeY = cropBoxY + 8;
+      if (typeof (ctx as any).roundRect === "function") {
+        (ctx as any).roundRect(badgeX, badgeY, badgeW, badgeH, 10);
+      } else {
+        ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      }
+      ctx.fill();
 
-    ctx.restore();
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("960 × 1280 (3:4)", cropBoxX + CROP_BOX_WIDTH / 2, badgeY + badgeH / 2);
+
+      ctx.restore();
+    } catch (err) {
+      console.error("Gagal menggambar preview canvas:", err);
+    }
   }, [pan, zoom, rotation, imageLoaded, CROP_BOX_WIDTH, CROP_BOX_HEIGHT]);
 
   useEffect(() => {
