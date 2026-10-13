@@ -164,7 +164,7 @@ foreach ($storageDirs as $dir) {
 echo "   ✅ Direktori storage & cache siap digunakan.\n\n";
 
 // LANGKAH 1.5: Pastikan JWT_SECRET terisi di .env untuk autentikasi siswa
-$envPath = $baseDir . '.env';
+$envPath = $baseDir.'.env';
 if (file_exists($envPath)) {
     $envContent = file_get_contents($envPath);
     if (! preg_match('/^JWT_SECRET=[a-zA-Z0-9_\-]+/m', $envContent)) {
