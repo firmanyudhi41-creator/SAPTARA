@@ -16,7 +16,7 @@ import {
   TARGET_PHOTO_WIDTH,
   TARGET_PHOTO_HEIGHT,
   TARGET_ASPECT_RATIO,
-  cropAndExportTo720x1280,
+  cropAndExportTo960x1280,
   ImageMeta,
 } from "../lib/image";
 import { Button } from "./ui/Button";
@@ -51,11 +51,11 @@ export function PhotoCropModal({
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
 
   // Responsive stage dimensions
-  // Crop box has aspect ratio 9:16 (0.5625)
+  // Crop box has aspect ratio 3:4 (0.75)
   const STAGE_HEIGHT = 384;
   const CROP_BOX_HEIGHT = 352;
-  const CROP_BOX_WIDTH = Math.round(CROP_BOX_HEIGHT * TARGET_ASPECT_RATIO); // 198px
-  const STAGE_WIDTH = Math.max(320, CROP_BOX_WIDTH + 80); // 320px+
+  const CROP_BOX_WIDTH = Math.round(CROP_BOX_HEIGHT * TARGET_ASPECT_RATIO); // 352 * 0.75 = 264px
+  const STAGE_WIDTH = Math.max(340, CROP_BOX_WIDTH + 64); // 340px+
 
   // Load image whenever imageSrc changes
   useEffect(() => {
@@ -158,7 +158,7 @@ export function PhotoCropModal({
     ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
     ctx.restore();
 
-    // 2. Draw sharp, full-brightness image clipped strictly inside 9:16 crop box
+    // 2. Draw sharp, full-brightness image clipped strictly inside 3:4 crop box
     ctx.save();
     ctx.beginPath();
     ctx.rect(cropBoxX, cropBoxY, CROP_BOX_WIDTH, CROP_BOX_HEIGHT);
@@ -214,7 +214,7 @@ export function PhotoCropModal({
     // Top-Right
     ctx.beginPath();
     ctx.moveTo(cropBoxX + CROP_BOX_WIDTH - cornerSize, cropBoxY);
-    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY);
+    ctx.lineTo(cropBoxX + CROP_BOX_WIDTH);
     ctx.lineTo(cropBoxX + CROP_BOX_WIDTH, cropBoxY + cornerSize);
     ctx.stroke();
 
@@ -235,7 +235,7 @@ export function PhotoCropModal({
     // 6. Badge label indicating target ratio inside preview
     ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
     ctx.beginPath();
-    const badgeW = 90;
+    const badgeW = 96;
     const badgeH = 20;
     const badgeX = cropBoxX + (CROP_BOX_WIDTH - badgeW) / 2;
     const badgeY = cropBoxY + 8;
@@ -246,7 +246,7 @@ export function PhotoCropModal({
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("720 × 1280 (9:16)", cropBoxX + CROP_BOX_WIDTH / 2, badgeY + badgeH / 2);
+    ctx.fillText("960 × 1280 (3:4)", cropBoxX + CROP_BOX_WIDTH / 2, badgeY + badgeH / 2);
 
     ctx.restore();
   }, [pan, zoom, rotation, imageLoaded, CROP_BOX_WIDTH, CROP_BOX_HEIGHT]);
@@ -371,14 +371,14 @@ export function PhotoCropModal({
     setRotation(0);
   };
 
-  // Confirm crop and export to 720 x 1280 px
+  // Confirm crop and export to 960 x 1280 px
   const handleConfirm = async () => {
     if (!imageRef.current) return;
     setIsExporting(true);
 
     try {
-      const fileName = originalFile?.name || "jurnal_saptara_720x1280.jpg";
-      const result = await cropAndExportTo720x1280(
+      const fileName = originalFile?.name || "jurnal_saptara_960x1280.jpg";
+      const result = await cropAndExportTo960x1280(
         imageRef.current,
         {
           panX: pan.x,
@@ -424,7 +424,7 @@ export function PhotoCropModal({
                 Pratinjau Batas Foto
               </h3>
               <p className="text-[11px] text-slate-500">
-                Format upload: <strong className="text-sky-700">720 × 1280 px (9:16 Portrait)</strong>
+                Format upload: <strong className="text-sky-700">960 × 1280 px (3:4 Portrait)</strong>
               </p>
             </div>
           </div>
@@ -455,8 +455,8 @@ export function PhotoCropModal({
             </div>
             <span className="text-[11px] text-slate-500 italic">
               {meta.isLandscape
-                ? "Geser foto ke samping untuk memilih area"
-                : "Geser foto ke atas/bawah untuk memusatkan"}
+                ? "Geser foto ke samping untuk memilih area 3:4"
+                : "Geser foto ke atas/bawah untuk memusatkan area 3:4"}
             </span>
           </div>
         )}
@@ -555,7 +555,7 @@ export function PhotoCropModal({
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-slate-500">
-            <span>💡 <em>Area di dalam garis kotak adalah bagian foto yang akan tersimpan.</em></span>
+            <span>💡 <em>Area di dalam garis kotak adalah bagian foto 3:4 yang akan tersimpan.</em></span>
           </div>
         </div>
 
@@ -582,12 +582,12 @@ export function PhotoCropModal({
             {isExporting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Memproses 720×1280...</span>
+                <span>Memproses 960×1280...</span>
               </>
             ) : (
               <>
                 <Check className="h-4 w-4" />
-                <span>Gunakan Foto (720 × 1280)</span>
+                <span>Gunakan Foto (960 × 1280)</span>
               </>
             )}
           </Button>

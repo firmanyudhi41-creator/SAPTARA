@@ -14,6 +14,7 @@ import {
   Smartphone,
   RefreshCw,
   X,
+  ZoomIn,
 } from "lucide-react";
 import { useHabits } from "../hooks/use-habits";
 import { useStudentLogbook, useSubmitLogbook } from "../hooks/use-logbook";
@@ -23,6 +24,7 @@ import { Badge } from "./ui/Badge";
 import { formatDateIndo } from "../lib/utils";
 import { PhotoCropModal } from "./PhotoCropModal";
 import { LiveCameraModal } from "./LiveCameraModal";
+import { PhotoPreviewModal } from "./PhotoPreviewModal";
 
 interface PhotoLogbookProps {
   studentId: number;
@@ -39,7 +41,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
   const [selectedHabitId, setSelectedHabitId] = useState<number | null>(null);
   const [caption, setCaption] = useState("");
 
-  // Foto dan State Crop Preview (Target 720 x 1280 px)
+  // Foto dan State Crop Preview (Target 3:4 Portrait 960 x 1280 px)
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
@@ -48,6 +50,14 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Full Photo preview modal state
+  const [viewingPhoto, setViewingPhoto] = useState<{
+    url: string;
+    title: string;
+    subtitle?: string;
+    caption?: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +92,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
     setIsCropModalOpen(true);
   };
 
-  // Handler saat crop modal dikonfirmasi (hasil akhir tepat 720x1280)
+  // Handler saat crop modal dikonfirmasi (hasil akhir tepat 960x1280)
   const handleCropConfirm = (croppedFile: File, previewUrl: string) => {
     setPhotoFile(croppedFile);
     setPhotoPreview(previewUrl);
@@ -148,7 +158,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-xl">📸</span>
             <div>
               <CardTitle className="font-display text-sky-900">Catat Jurnal Kebiasaan</CardTitle>
-              <CardDescription>Unggah foto kegiatan dengan batas 720 × 1280 px dan ceritakan pembiasaan positifmu hari ini</CardDescription>
+              <CardDescription>Unggah foto kegiatan dengan rasio 3:4 (960 × 1280 px) dan ceritakan pembiasaan positifmu hari ini</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -195,31 +205,39 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
               </div>
             </div>
 
-            {/* Photo upload field with 720 x 1280 preview crop */}
+            {/* Photo upload field with 3:4 (960 x 1280) preview crop */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Foto Bukti Kegiatan (Standar 720 × 1280 px)
+                  Foto Bukti Kegiatan (Standar 960 × 1280 px)
                 </label>
                 <span className="text-[11px] font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
-                  Rasio 9:16 Portrait
+                  Rasio 3:4 Portrait
                 </span>
               </div>
 
               {photoPreview ? (
                 <div className="space-y-2">
-                  {/* Preview Box - 9:16 Portrait Aspect */}
-                  <div className="relative w-44 sm:w-48 aspect-[9/16] rounded-2xl overflow-hidden border-2 border-sky-300 shadow-xl bg-slate-900 mx-auto group">
+                  {/* Preview Box - 3:4 Portrait Aspect */}
+                  <div className="relative w-48 sm:w-56 aspect-[3/4] rounded-2xl overflow-hidden border-2 border-sky-300 shadow-xl bg-slate-900 mx-auto group">
                     <img
                       src={photoPreview}
-                      alt="Preview Foto 720x1280"
-                      className="w-full h-full object-cover"
+                      alt="Preview Foto 960x1280"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() =>
+                        setViewingPhoto({
+                          url: photoPreview,
+                          title: "Pratinjau Foto Kegiatan",
+                          subtitle: "Format standar 960 × 1280 px (3:4)",
+                          caption,
+                        })
+                      }
                     />
 
-                    {/* Badge Resolusi 720 x 1280 */}
+                    {/* Badge Resolusi 960 x 1280 */}
                     <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
-                      720 × 1280 px
+                      960 × 1280 px (3:4)
                     </div>
 
                     {/* Tombol Hapus Foto */}
@@ -247,7 +265,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
 
                   <p className="text-center text-[11px] text-emerald-600 font-semibold flex items-center justify-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Foto berhasil disesuaikan ke ukuran 720 × 1280 px (siap diunggah).
+                    Foto berhasil disesuaikan ke ukuran 960 × 1280 px (rasio 3:4, siap diunggah).
                   </p>
                 </div>
               ) : (
@@ -277,10 +295,10 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
 
                   <div className="text-[11px] text-slate-500 space-y-0.5">
                     <p className="font-semibold text-slate-700">
-                      Otomatis disesuaikan ke <strong>720 × 1280 px (9:16)</strong>
+                      Otomatis disesuaikan ke <strong>960 × 1280 px (Rasio 3:4)</strong>
                     </p>
                     <p className="text-slate-400">
-                      Mendukung perangkat mode landscape maupun portrait dengan panduan batas pratinjau (crop preview).
+                      Mendukung kamera langsung maupun galeri dengan panduan batas pratinjau 3:4 sebelum di-upload.
                     </p>
                   </div>
                 </div>
@@ -348,16 +366,35 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {entries.map((entry) => (
               <Card key={entry.id} className="overflow-hidden border-slate-200/80 hover:border-sky-200 transition-all">
-                {/* Photo if present - Styled in 9:16 aspect container */}
+                {/* Photo if present - Mengikuti Rasio 960 x 1280 (3:4 Portrait) */}
                 {entry.photoUrl && (
-                  <div className="relative h-48 w-full bg-slate-900 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={entry.photoUrl}
-                      alt={entry.habitName || "Foto Jurnal"}
-                      className="h-full w-auto max-w-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute bottom-2 right-2 bg-slate-950/70 text-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-xs">
-                      720 × 1280
+                  <div className="relative w-full bg-slate-950/5 p-3 sm:p-4 flex items-center justify-center border-b border-slate-100">
+                    <div
+                      className="relative w-full max-w-[240px] aspect-[3/4] rounded-2xl overflow-hidden shadow-md border border-slate-200/80 bg-slate-900 group cursor-pointer hover:shadow-xl hover:border-sky-300 transition-all"
+                      onClick={() =>
+                        setViewingPhoto({
+                          url: entry.photoUrl!,
+                          title: `Jurnal Foto: ${entry.habitName || "Kegiatan"}`,
+                          subtitle: `${formatDateIndo(entry.date)} • ${entry.time?.slice(0, 5) || ""} WIB`,
+                          caption: entry.caption,
+                        })
+                      }
+                    >
+                      <img
+                        src={entry.photoUrl}
+                        alt={entry.habitName || "Foto Jurnal"}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2 left-2 bg-slate-950/75 text-slate-200 text-[9px] font-bold px-2 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1 border border-white/10 shadow-sm">
+                        <span>960 × 1280</span>
+                      </div>
+                      <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 backdrop-blur-xs transform group-hover:scale-100 scale-95 transition-all">
+                          <ZoomIn className="h-3.5 w-3.5 text-sky-600" />
+                          <span>Lihat Penuh</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -435,7 +472,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
         }}
       />
 
-      {/* Interactive Photo Crop Preview Modal (720 x 1280 px) */}
+      {/* Interactive Photo Crop Preview Modal (3:4 Portrait 960 x 1280 px) */}
       <PhotoCropModal
         isOpen={isCropModalOpen}
         imageSrc={rawImageSrc}
@@ -449,6 +486,16 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
             if (fileInputRef.current) fileInputRef.current.value = "";
           }
         }}
+      />
+
+      {/* Full Photo Preview Lightbox Modal (3:4 Portrait 960 x 1280 px) */}
+      <PhotoPreviewModal
+        isOpen={!!viewingPhoto}
+        onClose={() => setViewingPhoto(null)}
+        photoUrl={viewingPhoto?.url ?? null}
+        title={viewingPhoto?.title}
+        subtitle={viewingPhoto?.subtitle}
+        caption={viewingPhoto?.caption}
       />
     </div>
   );
