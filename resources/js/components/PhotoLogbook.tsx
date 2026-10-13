@@ -1,14 +1,28 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import confetti from "canvas-confetti";
-import { Camera, Upload, CheckCircle2, Clock, AlertCircle, Sparkles, MessageCircle, Loader2 } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Sparkles,
+  MessageCircle,
+  Loader2,
+  Crop,
+  Smartphone,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { useHabits } from "../hooks/use-habits";
 import { useStudentLogbook, useSubmitLogbook } from "../hooks/use-logbook";
 import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/Card";
 import { Badge } from "./ui/Badge";
 import { formatDateIndo } from "../lib/utils";
-import { resizeImage } from "../lib/image";
+import { PhotoCropModal } from "./PhotoCropModal";
+import { LiveCameraModal } from "./LiveCameraModal";
 
 interface PhotoLogbookProps {
   studentId: number;
@@ -24,9 +38,15 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
 
   const [selectedHabitId, setSelectedHabitId] = useState<number | null>(null);
   const [caption, setCaption] = useState("");
+
+  // Foto dan State Crop Preview (Target 720 x 1280 px)
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [rawFile, setRawFile] = useState<File | null>(null);
+
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,32 +59,50 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
     }
   }, [preselectedHabitId, habits]);
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler saat user memilih file dari galeri / kamera perangkat
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIsResizing(true);
-      try {
-        const resized = await resizeImage(file, 800, 800);
-        setPhotoFile(resized);
-        const reader = new FileReader();
-        reader.onload = () => setPhotoPreview(reader.result as string);
-        reader.readAsDataURL(resized);
-      } catch (err) {
-        console.error("Gagal mengubah ukuran gambar:", err);
-        setPhotoFile(file);
-        const reader = new FileReader();
-        reader.onload = () => setPhotoPreview(reader.result as string);
-        reader.readAsDataURL(file);
-      } finally {
-        setIsResizing(false);
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setRawFile(file);
+        setRawImageSrc(dataUrl);
+        setIsCropModalOpen(true);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  // Handler saat user mengambil foto via live camera modal
+  const handleCameraCapture = (dataUrl: string) => {
+    setRawImageSrc(dataUrl);
+    setRawFile(null);
+    setIsCameraModalOpen(false);
+    setIsCropModalOpen(true);
+  };
+
+  // Handler saat crop modal dikonfirmasi (hasil akhir tepat 720x1280)
+  const handleCropConfirm = (croppedFile: File, previewUrl: string) => {
+    setPhotoFile(croppedFile);
+    setPhotoPreview(previewUrl);
+    setIsCropModalOpen(false);
+  };
+
+  // Bersihkan foto yang dipilih
   const clearPhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(null);
+    setRawImageSrc(null);
+    setRawFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Buka kembali modal crop jika user ingin mengatur ulang batas foto
+  const handleReCrop = () => {
+    if (rawImageSrc) {
+      setIsCropModalOpen(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,7 +148,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-xl">📸</span>
             <div>
               <CardTitle className="font-display text-sky-900">Catat Jurnal Kebiasaan</CardTitle>
-              <CardDescription>Unggah foto dan ceritakan kegiatan positif yang kamu lakukan hari ini</CardDescription>
+              <CardDescription>Unggah foto kegiatan dengan batas 720 × 1280 px dan ceritakan pembiasaan positifmu hari ini</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -157,48 +195,104 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
               </div>
             </div>
 
-            {/* Photo upload field */}
+            {/* Photo upload field with 720 x 1280 preview crop */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Foto Bukti Kegiatan (Opsional tapi disarankan)
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Foto Bukti Kegiatan (Standar 720 × 1280 px)
+                </label>
+                <span className="text-[11px] font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+                  Rasio 9:16 Portrait
+                </span>
+              </div>
 
               {photoPreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 max-w-sm mx-auto group">
-                  <img src={photoPreview} alt="Preview" className="h-48 w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={clearPhoto}
-                    className="absolute top-2 right-2 rounded-full bg-rose-500 p-1.5 text-white shadow-md hover:bg-rose-600 transition-colors"
-                    title="Hapus foto"
-                  >
-                    ✕
-                  </button>
+                <div className="space-y-2">
+                  {/* Preview Box - 9:16 Portrait Aspect */}
+                  <div className="relative w-44 sm:w-48 aspect-[9/16] rounded-2xl overflow-hidden border-2 border-sky-300 shadow-xl bg-slate-900 mx-auto group">
+                    <img
+                      src={photoPreview}
+                      alt="Preview Foto 720x1280"
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Badge Resolusi 720 x 1280 */}
+                    <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      720 × 1280 px
+                    </div>
+
+                    {/* Tombol Hapus Foto */}
+                    <button
+                      type="button"
+                      onClick={clearPhoto}
+                      className="absolute top-2 right-2 rounded-full bg-rose-500 p-1 text-white shadow-md hover:bg-rose-600 transition-colors cursor-pointer"
+                      title="Hapus foto"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    {/* Tombol Potong Ulang (Overlay bottom) */}
+                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-transparent flex justify-center">
+                      <button
+                        type="button"
+                        onClick={handleReCrop}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/95 hover:bg-white text-slate-800 text-xs font-bold shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <Crop className="h-3.5 w-3.5 text-sky-600" />
+                        <span>Potong Ulang</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-[11px] text-emerald-600 font-semibold flex items-center justify-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Foto berhasil disesuaikan ke ukuran 720 × 1280 px (siap diunggah).
+                  </p>
                 </div>
               ) : (
-                <div
-                  onClick={() => !isResizing && fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-6 text-center hover:bg-sky-50/50 hover:border-sky-300 transition-all cursor-pointer"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-sky-600 mb-2">
-                    {isResizing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+                /* Choice cards when no photo selected yet */
+                <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/60 p-5 text-center space-y-3">
+                  <div className="flex items-center justify-center gap-3">
+                    {/* Live Camera Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsCameraModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-sm shadow-sky-500/30 transition-all cursor-pointer hover:scale-102 active:scale-98"
+                    >
+                      <Camera className="h-4 w-4" />
+                      <span>Ambil Foto (Kamera)</span>
+                    </button>
+
+                    {/* File / Gallery Picker Button */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold shadow-xs transition-all cursor-pointer hover:scale-102 active:scale-98"
+                    >
+                      <Upload className="h-4 w-4 text-slate-500" />
+                      <span>Pilih dari Galeri / File</span>
+                    </button>
                   </div>
-                  <p className="text-xs font-bold text-slate-700">
-                    {isResizing ? "Mengoptimalkan ukuran gambar..." : "Klik untuk ambil foto atau pilih gambar"}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Mendukung JPG, PNG (otomatis disesuaikan maks. 800x800 px)
-                  </p>
+
+                  <div className="text-[11px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-slate-700">
+                      Otomatis disesuaikan ke <strong>720 × 1280 px (9:16)</strong>
+                    </p>
+                    <p className="text-slate-400">
+                      Mendukung perangkat mode landscape maupun portrait dengan panduan batas pratinjau (crop preview).
+                    </p>
+                  </div>
                 </div>
               )}
 
+              {/* Hidden File Input */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handlePhotoChange}
+                onChange={handlePhotoFileChange}
                 className="hidden"
-                disabled={isResizing}
               />
             </div>
 
@@ -220,7 +314,7 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
             <div className="flex justify-end pt-2">
               <Button
                 type="submit"
-                disabled={submitMutation.isPending || isResizing}
+                disabled={submitMutation.isPending}
                 variant="gold"
                 size="lg"
                 className="w-full sm:w-auto"
@@ -254,14 +348,17 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             {entries.map((entry) => (
               <Card key={entry.id} className="overflow-hidden border-slate-200/80 hover:border-sky-200 transition-all">
-                {/* Photo if present */}
+                {/* Photo if present - Styled in 9:16 aspect container */}
                 {entry.photoUrl && (
-                  <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                  <div className="relative h-48 w-full bg-slate-900 overflow-hidden flex items-center justify-center">
                     <img
                       src={entry.photoUrl}
                       alt={entry.habitName || "Foto Jurnal"}
-                      className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+                      className="h-full w-auto max-w-full object-cover hover:scale-105 transition-transform duration-300"
                     />
+                    <div className="absolute bottom-2 right-2 bg-slate-950/70 text-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-xs">
+                      720 × 1280
+                    </div>
                   </div>
                 )}
 
@@ -279,46 +376,45 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
                     )}
                     {entry.status === "pending" && (
                       <Badge variant="warning" className="gap-1">
-                        <Clock className="h-3 w-3" /> Menunggu Guru
+                        <Clock className="h-3 w-3" /> Menunggu
                       </Badge>
                     )}
-                    {entry.status === "rejected" && (
-                      <Badge variant="destructive" className="gap-1">
-                        <AlertCircle className="h-3 w-3" /> Perlu Revisi
+                    {entry.status === "needs_revision" && (
+                      <Badge variant="danger" className="gap-1">
+                        <AlertCircle className="h-3 w-3" /> Perlu Perbaikan
                       </Badge>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl">
+                  <p className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-2.5 rounded-xl italic">
                     "{entry.caption}"
                   </p>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                    <span>📅 {formatDateIndo(entry.date)}</span>
-                    <span className="font-semibold text-sky-600">+{entry.xpEarned} mil</span>
+                  {/* Date and time */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                    <span>{formatDateIndo(entry.date)}</span>
+                    <span>{entry.time?.slice(0, 5)} WIB</span>
                   </div>
 
-                  {/* Teacher Feedback / Sticker */}
-                  {(entry.teacherComment || entry.teacherSticker) && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 text-xs text-amber-900">
-                      <div className="flex items-center gap-1.5 font-bold text-[11px] text-amber-800">
-                        <span>👨‍🏫 Komentar Guru:</span>
-                        {entry.teacherSticker && <span className="text-lg">{entry.teacherSticker}</span>}
+                  {/* Teacher Feedback */}
+                  {entry.teacherComment && (
+                    <div className="rounded-xl bg-sky-50/80 p-2.5 text-xs border border-sky-100">
+                      <div className="flex items-center gap-1 font-bold text-sky-800 mb-0.5">
+                        <span>{entry.teacherSticker || "⚓"}</span>
+                        <span>Catatan Guru Pembina:</span>
                       </div>
-                      {entry.teacherComment && (
-                        <p className="mt-1 text-xs italic">{entry.teacherComment}</p>
-                      )}
+                      <p className="text-slate-600 text-[11px]">{entry.teacherComment}</p>
                     </div>
                   )}
 
-                  {/* Parent Feedback */}
+                  {/* Parent Comment */}
                   {entry.parentComment && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-2.5 text-xs text-emerald-900">
-                      <div className="flex items-center gap-1 font-bold text-[11px] text-emerald-800">
-                        <MessageCircle className="h-3 w-3" />
-                        <span>Pesan Hangat Orang Tua:</span>
+                    <div className="rounded-xl bg-amber-50/80 p-2.5 text-xs border border-amber-100">
+                      <div className="flex items-center gap-1 font-bold text-amber-800 mb-0.5">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        <span>Komentar Orang Tua:</span>
                       </div>
-                      <p className="mt-1 text-xs italic">{entry.parentComment}</p>
+                      <p className="text-slate-600 text-[11px]">{entry.parentComment}</p>
                     </div>
                   )}
                 </div>
@@ -327,6 +423,33 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
           </div>
         )}
       </div>
+
+      {/* Live Camera Viewfinder Modal */}
+      <LiveCameraModal
+        isOpen={isCameraModalOpen}
+        onCapture={handleCameraCapture}
+        onClose={() => setIsCameraModalOpen(false)}
+        onFallbackToFile={() => {
+          setIsCameraModalOpen(false);
+          fileInputRef.current?.click();
+        }}
+      />
+
+      {/* Interactive Photo Crop Preview Modal (720 x 1280 px) */}
+      <PhotoCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={rawImageSrc}
+        originalFile={rawFile}
+        onConfirm={handleCropConfirm}
+        onCancel={() => {
+          setIsCropModalOpen(false);
+          if (!photoFile) {
+            setRawImageSrc(null);
+            setRawFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }
+        }}
+      />
     </div>
   );
 }
