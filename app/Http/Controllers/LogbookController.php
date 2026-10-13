@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class LogbookController extends Controller
 {
@@ -33,8 +34,7 @@ class LogbookController extends Controller
 
         $photoUrl = null;
         if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('logbook', 'public');
-            $photoUrl = Storage::url($path);
+            $photoUrl = $this->processAndStorePhoto($request->file('photo'));
         }
 
         $entry = LogbookEntry::create([
@@ -65,6 +65,104 @@ class LogbookController extends Controller
         }
 
         return response()->json($entry->load(['habit', 'student']), 201);
+    }
+
+    /**
+     * Memproses dan menyimpan foto logbook dengan ukuran tepat 720 x 1280 piksel (rasio 9:16 Portrait).
+     * Mendukung foto input baik dari device mode landscape maupun portrait, serta rotasi EXIF.
+     */
+    private function processAndStorePhoto($file): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+        $filename = 'logbook_'.Str::random(24).'.jpg';
+        $destinationRelative = 'logbook/'.$filename;
+
+        // Jika ekstensi GD tidak aktif, simpan file secara langsung
+        if (! extension_loaded('gd')) {
+            $path = $file->store('logbook', 'public');
+
+            return Storage::url($path);
+        }
+
+        $realPath = $file->getRealPath();
+        $source = null;
+        $mime = $file->getMimeType() ?: (file_exists($realPath) ? mime_content_type($realPath) : null);
+
+        if (str_contains($mime, 'jpeg') || str_contains($mime, 'jpg') || in_array($extension, ['jpg', 'jpeg'])) {
+            $source = @imagecreatefromjpeg($realPath);
+        } elseif (str_contains($mime, 'png') || $extension === 'png') {
+            $source = @imagecreatefrompng($realPath);
+        } elseif (str_contains($mime, 'webp') || $extension === 'webp') {
+            $source = @imagecreatefromwebp($realPath);
+        }
+
+        if (! $source) {
+            $path = $file->store('logbook', 'public');
+
+            return Storage::url($path);
+        }
+
+        // Tangani EXIF Orientation untuk JPEG dari smartphone
+        if (function_exists('exif_read_data') && ($extension === 'jpg' || $extension === 'jpeg')) {
+            $exif = @exif_read_data($realPath);
+            if ($exif && ! empty($exif['Orientation'])) {
+                switch ($exif['Orientation']) {
+                    case 3:
+                        $rotated = imagerotate($source, 180, 0);
+                        imagedestroy($source);
+                        $source = $rotated;
+                        break;
+                    case 6:
+                        $rotated = imagerotate($source, -90, 0);
+                        imagedestroy($source);
+                        $source = $rotated;
+                        break;
+                    case 8:
+                        $rotated = imagerotate($source, 90, 0);
+                        imagedestroy($source);
+                        $source = $rotated;
+                        break;
+                }
+            }
+        }
+
+        $origW = imagesx($source);
+        $origH = imagesy($source);
+
+        // Target: 720 x 1280 (rasio 9:16 = 0.5625)
+        $targetRatio = 720 / 1280;
+        $currentRatio = $origW / $origH;
+
+        if ($origW === 720 && $origH === 1280) {
+            $canvas = $source;
+        } else {
+            if ($currentRatio > $targetRatio) {
+                // Foto landscape atau lebih lebar dari 9:16 -> crop horizontal (tengah)
+                $srcH = $origH;
+                $srcW = (int) round($origH * $targetRatio);
+                $srcX = (int) round(($origW - $srcW) / 2);
+                $srcY = 0;
+            } else {
+                // Foto lebih tinggi dari 9:16 -> crop vertikal (tengah)
+                $srcW = $origW;
+                $srcH = (int) round($origW / $targetRatio);
+                $srcX = 0;
+                $srcY = (int) round(($origH - $srcH) / 2);
+            }
+
+            $canvas = imagecreatetruecolor(720, 1280);
+            imagecopyresampled($canvas, $source, 0, 0, $srcX, $srcY, 720, 1280, $srcW, $srcH);
+            imagedestroy($source);
+        }
+
+        ob_start();
+        imagejpeg($canvas, null, 88);
+        $imageData = ob_get_clean();
+        imagedestroy($canvas);
+
+        Storage::disk('public')->put($destinationRelative, $imageData);
+
+        return Storage::url($destinationRelative);
     }
 
     /** GET /api/logbook/student/{studentId} */
