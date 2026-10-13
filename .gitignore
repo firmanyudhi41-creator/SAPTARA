@@ -27,3 +27,10 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /dist
+
+# Database & Backup Dumps
+*.sql.gz
+*.dump
+/backups/
+/storage/app/backups/
+/storage/app/backup-temp/

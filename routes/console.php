@@ -19,3 +19,9 @@ Schedule::command('saptara:send-weekly-reports')
     ->weeklyOn(0, '18:00')
     ->timezone('Asia/Jakarta')
     ->description('Kirim rekap mingguan ke orang tua');
+
+// Backup otomatis database setiap tengah malam pukul 00:00 WIB
+Schedule::command('db:backup --only-db')
+    ->dailyAt('00:00')
+    ->timezone('Asia/Jakarta')
+    ->description('Backup Database');
