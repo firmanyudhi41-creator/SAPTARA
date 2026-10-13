@@ -59,9 +59,17 @@ class LogbookController extends Controller
                 'habit_id' => $request->habit_id,
                 'date' => $today,
             ]);
-            Student::where('id', $studentId)->increment('xp', 10);
-            Student::where('id', $studentId)->increment('coins', 5);
-            Student::where('id', $studentId)->update(['last_active_date' => $today]);
+            $student = Student::find($studentId);
+            if ($student) {
+                $student->increment('xp', 10);
+                $student->increment('coins', 5);
+                $student->recordDailyActivity($today);
+            }
+        } else {
+            // Jika habit completion sudah ada hari ini tapi siswa baru mengunggah logbook,
+            // pastikan aktivitas harian tetap tercatat jika belum
+            $student = Student::find($studentId);
+            $student?->recordDailyActivity($today);
         }
 
         return response()->json($entry->load(['habit', 'student']), 201);
@@ -239,7 +247,7 @@ class LogbookController extends Controller
         $entry->update([
             'status' => 'verified',
             'reviewed_by_teacher_id' => $request->_teacher->id,
-            'teacher_sticker' => $request->sticker ?? '🪙',
+            'teacher_sticker' => $request->sticker ?? '🪹',
             'teacher_comment' => $request->comment ?? 'Bagus, Kapten!',
             'xp_earned' => $xpReward,
         ]);
@@ -255,7 +263,7 @@ class LogbookController extends Controller
                         $student,
                         $entry->load('habit'),
                         $request->comment ?? 'Bagus, Kapten!',
-                        $request->sticker ?? '🪙'
+                        $request->sticker ?? '🪹'
                     )
                 );
             }
