@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Dialog } from "../../components/ui/Dialog";
+import { PhotoPreviewModal } from "../../components/PhotoPreviewModal";
 import { formatDateIndo } from "../../lib/utils";
-import { ClipboardCheck, CheckCircle, XCircle, Sparkles, MessageSquare, AlertCircle } from "lucide-react";
+import { ClipboardCheck, CheckCircle, XCircle, Sparkles, MessageSquare, AlertCircle, ZoomIn } from "lucide-react";
 import confetti from "canvas-confetti";
 
 const STICKERS = ["⭐ Hebat!", "🌟 Luar Biasa!", "🏆 Juara!", "🚀 Terus Semangat!", "👏 Bangga Padamu!", "💪 Tangguh!"];
@@ -38,6 +39,14 @@ export function FeedPage() {
   // Selected for batch verify
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // Photo preview modal state
+  const [viewingPhoto, setViewingPhoto] = useState<{
+    url: string;
+    title: string;
+    subtitle?: string;
+    caption?: string;
+  } | null>(null);
+
   const handleQuickVerify = async (entryId: number) => {
     try {
       await verifyMutation.mutateAsync({ entryId, sticker: "⭐ Hebat!" });
@@ -62,30 +71,22 @@ export function FeedPage() {
         comment: feedbackComment || undefined,
         sticker: selectedSticker,
       });
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       setFeedbackModalOpen(false);
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
     } catch {
       // ignore
     }
   };
 
   const handleReject = async (entryId: number) => {
-    const reason = window.prompt("Berikan alasan atau catatan revisi untuk siswa:", "Foto kurang jelas, silakan unggah ulang");
-    if (reason !== null) {
-      try {
-        await rejectMutation.mutateAsync({ entryId, comment: reason });
-      } catch {
-        // ignore
-      }
+    const comment = prompt("Catatan perbaikan untuk siswa (wajib diisi):");
+    if (comment === null) return;
+    if (!comment.trim()) {
+      alert("Harap berikan catatan perbaikan agar siswa memahami apa yang perlu diperbaiki.");
+      return;
     }
-  };
-
-  const handleBatchVerify = async () => {
-    if (selectedIds.length === 0) return;
     try {
-      await batchVerifyMutation.mutateAsync({ entryIds: selectedIds, sticker: "⭐ Terverifikasi Guru" });
-      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
-      setSelectedIds([]);
+      await rejectMutation.mutateAsync({ entryId, comment: comment.trim() });
     } catch {
       // ignore
     }
@@ -93,36 +94,55 @@ export function FeedPage() {
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
+  const handleSelectAll = () => {
+    if (!pendingEntries) return;
+    if (selectedIds.length === pendingEntries.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(pendingEntries.map((e) => e.id));
+    }
+  };
+
+  const handleBatchVerify = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await batchVerifyMutation.mutateAsync({
+        entryIds: selectedIds,
+        sticker: "👍",
+        comment: "Bagus, Kapten! Lanjutkan!",
+      });
+      setSelectedIds([]);
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    } catch {
+      // ignore
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 pb-24 space-y-6">
-      {/* Header & Class Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header section with class selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6 text-sky-600" />
-            <span>Beranda Verifikasi Jurnal</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Periksa dan berikan apresiasi pada foto pembiasaan yang dikirim oleh siswa
-          </p>
+          <h2 className="font-display text-2xl font-bold text-slate-800">Verifikasi Jurnal Karakter</h2>
+          <p className="text-xs text-slate-500">Tinjau foto bukti kegiatan harian siswa dan berikan apresiasi</p>
         </div>
 
         {/* Class selector */}
         {classes && classes.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Kelas:</span>
+            <span className="text-xs font-semibold text-slate-600">Pilih Kelas:</span>
             <select
               value={selectedClassId ?? ""}
               onChange={(e) => setSelectedClassId(Number(e.target.value))}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
             >
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.schoolName} ({c.classCode || c.class_code})
+                  {c.classCode} — {c.shipName}
                 </option>
               ))}
             </select>
@@ -130,31 +150,45 @@ export function FeedPage() {
         )}
       </div>
 
-      {/* Pending verification section */}
-      <Card className="border-amber-200 bg-amber-50/20 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Pending verification queue card */}
+      <Card className="border-sky-100 shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <ClipboardCheck className="h-4 w-4" />
+            </span>
             <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base text-slate-800">Menunggu Verifikasi</CardTitle>
-                <Badge variant="warning">{pendingEntries?.length ?? 0} Perlu Ditinjau</Badge>
-              </div>
-              <CardDescription>Beri apresiasi atau stiker untuk memotivasi semangat anak</CardDescription>
+              <CardTitle className="text-base text-slate-800">Antrean Verifikasi</CardTitle>
+              <CardDescription className="text-xs">
+                Jurnal siswa yang menunggu persetujuan ({pendingEntries?.length ?? 0} entri)
+              </CardDescription>
             </div>
-
-            {selectedIds.length > 0 && (
-              <Button
-                variant="emerald"
-                size="sm"
-                onClick={handleBatchVerify}
-                disabled={batchVerifyMutation.isPending}
-                className="gap-1.5"
-              >
-                <CheckCircle className="h-4 w-4" />
-                <span>Verifikasi {selectedIds.length} Terpilih Sekaligus</span>
-              </Button>
-            )}
           </div>
+
+          {pendingEntries && pendingEntries.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSelectAll}
+                className="text-xs"
+              >
+                {selectedIds.length === pendingEntries.length ? "Batal Pilih" : "Pilih Semua"}
+              </Button>
+              {selectedIds.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="gold"
+                  onClick={handleBatchVerify}
+                  disabled={batchVerifyMutation.isPending}
+                  className="text-xs"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Verifikasi Sekaligus ({selectedIds.length})</span>
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
 
         <CardContent>
@@ -186,7 +220,7 @@ export function FeedPage() {
                           onChange={() => toggleSelect(entry.id)}
                           className="h-4 w-4 rounded text-sky-600 focus:ring-sky-500 cursor-pointer"
                         />
-                        <span className="text-lg">{entry.studentAvatar || "🧒"}</span>
+                        <span className="text-lg">{entry.studentAvatar || "🧑"}</span>
                         <div>
                           <p className="font-bold text-xs text-slate-800">{entry.studentName}</p>
                           <p className="text-[10px] text-slate-400">{formatDateIndo(entry.date)}</p>
@@ -197,14 +231,36 @@ export function FeedPage() {
                       </Badge>
                     </div>
 
-                    {/* Photo proof */}
+                    {/* Photo proof - Mengikuti Rasio 3:4 Portrait (960 x 1280 px) */}
                     {entry.photoUrl && (
-                      <div className="h-44 w-full bg-slate-100 overflow-hidden">
-                        <img
-                          src={entry.photoUrl}
-                          alt="Bukti Siswa"
-                          className="h-full w-full object-cover"
-                        />
+                      <div className="relative w-full bg-slate-950/5 p-3 sm:p-4 flex items-center justify-center border-b border-slate-100">
+                        <div
+                          className="relative w-full max-w-[240px] aspect-[3/4] rounded-2xl overflow-hidden shadow-md border border-slate-200/80 bg-slate-900 group cursor-pointer hover:shadow-xl hover:border-sky-300 transition-all"
+                          onClick={() =>
+                            setViewingPhoto({
+                              url: entry.photoUrl!,
+                              title: `Jurnal Foto: ${entry.habitName || "Kegiatan"}`,
+                              subtitle: `${entry.studentName} • ${formatDateIndo(entry.date)}`,
+                              caption: entry.caption,
+                            })
+                          }
+                        >
+                          <img
+                            src={entry.photoUrl}
+                            alt={`Bukti kegiatan ${entry.studentName}`}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <div className="absolute top-2 left-2 bg-slate-950/75 text-slate-200 text-[9px] font-bold px-2 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1 border border-white/10 shadow-sm">
+                            <span>960 × 1280</span>
+                          </div>
+                          <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 backdrop-blur-xs transform group-hover:scale-100 scale-95 transition-all">
+                              <ZoomIn className="h-3.5 w-3.5 text-sky-600" />
+                              <span>Lihat Penuh</span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -259,12 +315,14 @@ export function FeedPage() {
       <Dialog
         open={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}
-        title="Beri Apresiasi & Stiker Motivasi 🌟"
-        description="Pilih stiker apresiasi dan tuliskan pesan penyemangat untuk siswa"
+        title="Apresiasi & Verifikasi Jurnal"
+        description="Pilih stiker motivasi dan tuliskan catatan penguatan untuk siswa"
       >
-        <div className="space-y-4 pt-3">
+        <div className="space-y-4 pt-2">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Pilih Stiker</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">
+              Pilih Stiker Apresiasi
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {STICKERS.map((stk) => (
                 <button
@@ -306,6 +364,16 @@ export function FeedPage() {
           </div>
         </div>
       </Dialog>
+
+      {/* Full Photo Preview Lightbox Modal (3:4 Portrait 960 x 1280 px) */}
+      <PhotoPreviewModal
+        isOpen={!!viewingPhoto}
+        onClose={() => setViewingPhoto(null)}
+        photoUrl={viewingPhoto?.url ?? null}
+        title={viewingPhoto?.title}
+        subtitle={viewingPhoto?.subtitle}
+        caption={viewingPhoto?.caption}
+      />
     </div>
   );
 }

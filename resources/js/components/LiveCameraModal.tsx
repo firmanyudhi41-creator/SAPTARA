@@ -100,15 +100,16 @@ export function LiveCameraModal({
     const video = videoRef.current;
     if (!video || !isReady) return;
 
+    // Ambil resolusi penuh dari kamera perangkat
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
     stopStream();
     onCapture(dataUrl);
@@ -131,7 +132,7 @@ export function LiveCameraModal({
             </span>
             <div>
               <h3 className="font-display font-bold text-sm text-white">Ambil Foto Langsung</h3>
-              <p className="text-[10px] text-slate-400">Panduan batas foto 9:16 (720 × 1280)</p>
+              <p className="text-[10px] text-slate-400">Panduan batas foto 3:4 (960 × 1280)</p>
             </div>
           </div>
           <button
@@ -174,14 +175,14 @@ export function LiveCameraModal({
                 } ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
               />
 
-              {/* 9:16 Target Viewfinder Guide Frame */}
+              {/* 3:4 Target Viewfinder Guide Frame */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                {/* 9:16 Crop Box with guide corners */}
+                {/* 3:4 Crop Box with guide corners */}
                 <div
                   className="relative border-2 border-white/80 shadow-2xl rounded-xl"
                   style={{
-                    height: "310px",
-                    width: `${Math.round(310 * (9 / 16))}px`,
+                    height: "320px",
+                    width: `${Math.round(320 * (3 / 4))}px`,
                   }}
                 >
                   {/* Outer dimmed borders created by box shadow */}
@@ -194,8 +195,8 @@ export function LiveCameraModal({
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-sky-400 rounded-br-sm" />
 
                   {/* Badge */}
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/80 px-2 py-0.5 rounded-full text-[9px] font-bold text-sky-400 border border-sky-500/30 whitespace-nowrap">
-                    Batas 9:16 (720×1280)
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/80 px-2.5 py-0.5 rounded-full text-[9px] font-bold text-sky-400 border border-sky-500/30 whitespace-nowrap">
+                    Batas 3:4 (960×1280)
                   </div>
                 </div>
               </div>

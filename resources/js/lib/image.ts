@@ -1,10 +1,11 @@
 /**
  * Utility functions for handling, cropping, and resizing image files on the frontend.
+ * Mengikuti standar rasio 3:4 portrait (960 x 1280 px).
  */
 
-export const TARGET_PHOTO_WIDTH = 720;
+export const TARGET_PHOTO_WIDTH = 960;
 export const TARGET_PHOTO_HEIGHT = 1280;
-export const TARGET_ASPECT_RATIO = TARGET_PHOTO_WIDTH / TARGET_PHOTO_HEIGHT; // 9 / 16 = 0.5625
+export const TARGET_ASPECT_RATIO = TARGET_PHOTO_WIDTH / TARGET_PHOTO_HEIGHT; // 3 / 4 = 0.75
 
 export interface ResizeImageOptions {
   maxWidth?: number;
@@ -62,10 +63,10 @@ export async function getImageMeta(fileOrUrl: File | string): Promise<ImageMeta>
 }
 
 /**
- * Memotong dan mengekspor gambar ke ukuran tepat 720 x 1280 px (rasio 9:16)
+ * Memotong dan mengekspor gambar ke ukuran tepat 960 x 1280 px (rasio 3:4 portrait)
  * berdasarkan parameter crop (pan, zoom, rotasi) dari pratinjau.
  */
-export async function cropAndExportTo720x1280(
+export async function cropAndExportTo960x1280(
   image: HTMLImageElement,
   params: CropParameters,
   fileName = "logbook_photo.jpg",
@@ -96,7 +97,7 @@ export async function cropAndExportTo720x1280(
   const renderedWidth = effNaturalWidth * baseScale * params.zoom;
   const renderedHeight = effNaturalHeight * baseScale * params.zoom;
 
-  // Rasio konversi dari crop box layar ke canvas ekspor (720x1280)
+  // Rasio konversi dari crop box layar ke canvas ekspor (960x1280)
   const scaleMultiplier = TARGET_PHOTO_WIDTH / params.cropBoxWidth;
 
   const exportRenderedWidth = renderedWidth * scaleMultiplier;
@@ -144,11 +145,14 @@ export async function cropAndExportTo720x1280(
   });
 }
 
+// Alias untuk kompatibilitas
+export const cropAndExportTo720x1280 = cropAndExportTo960x1280;
+
 /**
- * Otomatis memotong gambar ke tengah dengan rasio 9:16 dan ukuran 720 x 1280 px.
+ * Otomatis memotong gambar ke tengah dengan rasio 3:4 dan ukuran 960 x 1280 px.
  * Digunakan sebagai fallback jika user memilih auto-crop.
  */
-export async function autoCropTo720x1280(
+export async function autoCropTo960x1280(
   file: File,
   quality = 0.88
 ): Promise<File> {
@@ -171,7 +175,7 @@ export async function autoCropTo720x1280(
         return;
       }
 
-      // Hitung koordinat crop center 9:16
+      // Hitung koordinat crop center 3:4
       const currentRatio = width / height;
       let srcX = 0;
       let srcY = 0;
@@ -229,6 +233,8 @@ export async function autoCropTo720x1280(
     img.src = objectUrl;
   });
 }
+
+export const autoCropTo720x1280 = autoCropTo960x1280;
 
 /**
  * Resize an image file so that its dimensions do not exceed maxWidth x maxHeight,

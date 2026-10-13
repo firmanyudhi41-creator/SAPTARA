@@ -102,7 +102,7 @@ class LogbookPhotoTest extends TestCase
         return new UploadedFile($tempPath, $name, 'image/jpeg', null, true);
     }
 
-    public function test_upload_landscape_photo_is_cropped_and_saved_to_720x1280()
+    public function test_upload_landscape_photo_is_cropped_and_saved_to_960x1280()
     {
         // Buat gambar landscape 1920 x 1080
         $landscapeFile = $this->createRealImage(1920, 1080, 'landscape.jpg');
@@ -118,22 +118,22 @@ class LogbookPhotoTest extends TestCase
         $data = $response->json();
         $this->assertNotNull($data['photo_url']);
 
-        // Verifikasi file yang disimpan di storage berukuran tepat 720 x 1280
+        // Verifikasi file yang disimpan di storage berukuran tepat 960 x 1280
         $relativePath = str_replace('/storage/', '', $data['photo_url']);
         Storage::disk('public')->assertExists($relativePath);
 
         $savedContent = Storage::disk('public')->get($relativePath);
         $savedImage = imagecreatefromstring($savedContent);
 
-        $this->assertEquals(720, imagesx($savedImage), 'Lebar gambar hasil harus 720 piksel');
+        $this->assertEquals(960, imagesx($savedImage), 'Lebar gambar hasil harus 960 piksel (3:4)');
         $this->assertEquals(1280, imagesy($savedImage), 'Tinggi gambar hasil harus 1280 piksel');
 
         imagedestroy($savedImage);
     }
 
-    public function test_upload_portrait_photo_is_scaled_to_720x1280()
+    public function test_upload_portrait_photo_is_scaled_to_960x1280()
     {
-        // Buat gambar portrait 1080 x 1920
+        // Buat gambar portrait 1080 x 1920 (rasio 9:16)
         $portraitFile = $this->createRealImage(1080, 1920, 'portrait.jpg');
 
         $response = $this->withHeader('Authorization', 'Bearer '.$this->studentToken)
@@ -152,21 +152,21 @@ class LogbookPhotoTest extends TestCase
         $savedContent = Storage::disk('public')->get($relativePath);
         $savedImage = imagecreatefromstring($savedContent);
 
-        $this->assertEquals(720, imagesx($savedImage), 'Lebar gambar hasil harus 720 piksel');
+        $this->assertEquals(960, imagesx($savedImage), 'Lebar gambar hasil harus 960 piksel (3:4)');
         $this->assertEquals(1280, imagesy($savedImage), 'Tinggi gambar hasil harus 1280 piksel');
 
         imagedestroy($savedImage);
     }
 
-    public function test_upload_exact_720x1280_photo_is_stored_directly()
+    public function test_upload_exact_960x1280_photo_is_stored_directly()
     {
-        // Buat gambar yang sudah tepat 720 x 1280
-        $exactFile = $this->createRealImage(720, 1280, 'exact_720x1280.jpg');
+        // Buat gambar yang sudah tepat 960 x 1280
+        $exactFile = $this->createRealImage(960, 1280, 'exact_960x1280.jpg');
 
         $response = $this->withHeader('Authorization', 'Bearer '.$this->studentToken)
             ->post('/api/logbook', [
                 'habit_id' => $this->habit->id,
-                'caption' => 'Refleksi hasil crop pratinjau 720x1280.',
+                'caption' => 'Refleksi hasil crop pratinjau 3:4 (960x1280).',
                 'photo' => $exactFile,
             ]);
 
@@ -179,7 +179,7 @@ class LogbookPhotoTest extends TestCase
         $savedContent = Storage::disk('public')->get($relativePath);
         $savedImage = imagecreatefromstring($savedContent);
 
-        $this->assertEquals(720, imagesx($savedImage));
+        $this->assertEquals(960, imagesx($savedImage));
         $this->assertEquals(1280, imagesy($savedImage));
 
         imagedestroy($savedImage);

@@ -68,7 +68,7 @@ class LogbookController extends Controller
     }
 
     /**
-     * Memproses dan menyimpan foto logbook dengan ukuran tepat 720 x 1280 piksel (rasio 9:16 Portrait).
+     * Memproses dan menyimpan foto logbook dengan ukuran tepat 960 x 1280 piksel (rasio 3:4 Portrait).
      * Mendukung foto input baik dari device mode landscape maupun portrait, serta rotasi EXIF.
      */
     private function processAndStorePhoto($file): string
@@ -129,29 +129,31 @@ class LogbookController extends Controller
         $origW = imagesx($source);
         $origH = imagesy($source);
 
-        // Target: 720 x 1280 (rasio 9:16 = 0.5625)
-        $targetRatio = 720 / 1280;
+        // Target: 960 x 1280 (rasio 3:4 = 0.75)
+        $targetW = 960;
+        $targetH = 1280;
+        $targetRatio = $targetW / $targetH;
         $currentRatio = $origW / $origH;
 
-        if ($origW === 720 && $origH === 1280) {
+        if ($origW === $targetW && $origH === $targetH) {
             $canvas = $source;
         } else {
             if ($currentRatio > $targetRatio) {
-                // Foto landscape atau lebih lebar dari 9:16 -> crop horizontal (tengah)
+                // Foto landscape atau lebih lebar dari 3:4 -> crop horizontal (tengah)
                 $srcH = $origH;
                 $srcW = (int) round($origH * $targetRatio);
                 $srcX = (int) round(($origW - $srcW) / 2);
                 $srcY = 0;
             } else {
-                // Foto lebih tinggi dari 9:16 -> crop vertikal (tengah)
+                // Foto lebih tinggi dari 3:4 -> crop vertikal (tengah)
                 $srcW = $origW;
                 $srcH = (int) round($origW / $targetRatio);
                 $srcX = 0;
                 $srcY = (int) round(($origH - $srcH) / 2);
             }
 
-            $canvas = imagecreatetruecolor(720, 1280);
-            imagecopyresampled($canvas, $source, 0, 0, $srcX, $srcY, 720, 1280, $srcW, $srcH);
+            $canvas = imagecreatetruecolor($targetW, $targetH);
+            imagecopyresampled($canvas, $source, 0, 0, $srcX, $srcY, $targetW, $targetH, $srcW, $srcH);
             imagedestroy($source);
         }
 
