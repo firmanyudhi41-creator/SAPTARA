@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Camera, X, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
+import { Camera, X, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "./ui/Button";
 
 interface LiveCameraModalProps {
@@ -32,7 +32,7 @@ export function LiveCameraModal({
     setIsReady(false);
   };
 
-  // Start camera stream
+  // Start camera stream with highest possible resolution
   const startCamera = async (mode: "environment" | "user") => {
     stopStream();
     setErrorMsg(null);
@@ -55,8 +55,8 @@ export function LiveCameraModal({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: mode },
-          width: { ideal: 1920, min: 720 },
-          height: { ideal: 1080, min: 720 },
+          width: { ideal: 2560, min: 720 },
+          height: { ideal: 1440, min: 720 },
         },
         audio: false,
       });
@@ -96,19 +96,61 @@ export function LiveCameraModal({
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
+  /**
+   * Menjepret foto dari kamera:
+   * Mengambil pemotongan maksimal dari sensor kamera dengan mempertahankan rasio 3:4.
+   * Tidak melakukan resize/downscale saat pengambilan ini agar kualitas tetap maksimal.
+   * Proses resize ke ukuran target (960 x 1280) dilakukan setelah foto berhasil diambil.
+   */
   const handleSnap = () => {
     const video = videoRef.current;
     if (!video || !isReady) return;
 
-    // Ambil resolusi penuh dari kamera perangkat
+    const vW = video.videoWidth || 1920;
+    const vH = video.videoHeight || 1080;
+    const targetRatio = 3 / 4; // 0.75
+    const currentRatio = vW / vH;
+
+    // Hitung area pemotongan maksimal sesuai rasio 3:4
+    let cropW: number;
+    let cropH: number;
+    let cropX: number;
+    let cropY: number;
+
+    if (currentRatio > targetRatio) {
+      // Frame lebih lebar (misal: landscape 16:9 atau 4:3)
+      // Gunakan tinggi maksimal sensor, hitung lebar sesuai 3:4
+      cropH = vH;
+      cropW = Math.round(vH * targetRatio);
+      cropX = Math.round((vW - cropW) / 2);
+      cropY = 0;
+    } else {
+      // Frame lebih tinggi (misal: portrait 9:16)
+      // Gunakan lebar maksimal sensor, hitung tinggi sesuai 3:4
+      cropW = vW;
+      cropH = Math.round(vW / targetRatio);
+      cropX = 0;
+      cropY = Math.round((vH - cropH) / 2);
+    }
+
+    // Buat canvas dengan resolusi maksimal yang didapat dari sensor (tanpa resize prematur)
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 1920;
-    canvas.height = video.videoHeight || 1080;
+    canvas.width = cropW;
+    canvas.height = cropH;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    if (facingMode === "user") {
+      // Mirror horizontal untuk kamera depan agar sesuai dengan preview
+      ctx.translate(cropW, 0);
+      ctx.scale(-1, 1);
+    }
+
+    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
     stopStream();
@@ -132,7 +174,7 @@ export function LiveCameraModal({
             </span>
             <div>
               <h3 className="font-display font-bold text-sm text-white">Ambil Foto Langsung</h3>
-              <p className="text-[10px] text-slate-400">Panduan batas foto 3:4 (960 × 1280)</p>
+              <p className="text-[10px] text-slate-400">Rasio 3:4 Portrait (Ukuran Maksimal Kamera)</p>
             </div>
           </div>
           <button
@@ -144,8 +186,8 @@ export function LiveCameraModal({
           </button>
         </div>
 
-        {/* Viewfinder Area */}
-        <div className="relative flex items-center justify-center bg-black min-h-[360px] overflow-hidden select-none">
+        {/* Viewfinder Area: Frame 3:4 Maksimal yang responsif */}
+        <div className="relative flex items-center justify-center bg-black p-3 sm:p-4 overflow-hidden select-none">
           {errorMsg ? (
             <div className="p-6 text-center max-w-xs space-y-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 mx-auto">
@@ -163,7 +205,7 @@ export function LiveCameraModal({
               </Button>
             </div>
           ) : (
-            <>
+            <div className="relative w-full max-w-[340px] aspect-[3/4] max-h-[65vh] rounded-2xl overflow-hidden bg-slate-950 border-2 border-white/40 shadow-2xl flex items-center justify-center">
               {/* Video Element */}
               <video
                 ref={videoRef}
@@ -175,32 +217,33 @@ export function LiveCameraModal({
                 } ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
               />
 
-              {/* 3:4 Target Viewfinder Guide Frame */}
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                {/* 3:4 Crop Box with guide corners */}
-                <div
-                  className="relative border-2 border-white/80 shadow-2xl rounded-xl"
-                  style={{
-                    height: "320px",
-                    width: `${Math.round(320 * (3 / 4))}px`,
-                  }}
-                >
-                  {/* Outer dimmed borders created by box shadow */}
-                  <div className="absolute -inset-[1000px] border-[1000px] border-black/55 pointer-events-none" />
+              {/* Viewfinder Guide Overlay */}
+              <div className="absolute inset-0 pointer-events-none">
+                {/* Corner Accent marks */}
+                <div className="absolute top-3 left-3 w-5 h-5 border-t-3 border-l-3 border-sky-400 rounded-tl-md shadow-sm" />
+                <div className="absolute top-3 right-3 w-5 h-5 border-t-3 border-r-3 border-sky-400 rounded-tr-md shadow-sm" />
+                <div className="absolute bottom-3 left-3 w-5 h-5 border-b-3 border-l-3 border-sky-400 rounded-bl-md shadow-sm" />
+                <div className="absolute bottom-3 right-3 w-5 h-5 border-b-3 border-r-3 border-sky-400 rounded-br-md shadow-sm" />
 
-                  {/* Corner Accent marks */}
-                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-sky-400 rounded-tl-sm" />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-sky-400 rounded-tr-sm" />
-                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-sky-400 rounded-bl-sm" />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-sky-400 rounded-br-sm" />
+                {/* Subtle Rule of Thirds Grid */}
+                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-20 pointer-events-none">
+                  <div className="border-r border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-r border-b border-white" />
+                  <div className="border-b border-white" />
+                  <div className="border-r border-white" />
+                  <div className="border-r border-white" />
+                  <div />
+                </div>
 
-                  {/* Badge */}
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900/80 px-2.5 py-0.5 rounded-full text-[9px] font-bold text-sky-400 border border-sky-500/30 whitespace-nowrap">
-                    Batas 3:4 (960×1280)
-                  </div>
+                {/* Badge Penanda Rasio 3:4 */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-xs px-3 py-1 rounded-full text-[10px] font-semibold text-sky-300 border border-sky-500/30 shadow-md whitespace-nowrap">
+                  Rasio 3:4 (Portrait)
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 
