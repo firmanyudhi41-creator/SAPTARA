@@ -120,3 +120,69 @@ Di cPanel menu **Cron Jobs**, tambahkan perintah berikut setiap menit:
 * * * * * /usr/local/bin/php /home/saptarai/saptara/artisan schedule:run >> /dev/null 2>&1
 ```
 *(Sesuaikan path `/usr/local/bin/php` dan `/home/saptarai/saptara` dengan user cPanel Anda).*
+
+---
+
+## ⚠️ Troubleshooting: Error 403 Forbidden (LiteSpeed Web Server)
+
+Jika saat membuka halaman web atau memanggil API muncul error:
+> `403 Forbidden: Access to this resource on the server is denied!`
+
+Penyebab umum dan cara mengatasinya:
+
+### 1. Izin Berkas & Direktori (Aturan Ketat LiteSpeed suEXEC)
+LiteSpeed dengan **suEXEC** menolak menjalankan file PHP jika folder atau file memiliki izin tulis oleh grup (`group-writable`) atau publik.
+- **Direktori/Folder** wajib berizin **`755`** (bukan `775` atau `777`).
+- **Berkas/File** (`index.php`, `.htaccess`, `.php`) wajib berizin **`644`** (bukan `664` atau `777`).
+
+**Cara Cepat Memperbaiki di cPanel:**
+- Melalui File Manager: Klik kanan file `index.php` di dalam `public_html/` -> **Change Permissions** -> ubah menjadi **`0644`** (User: Read+Write, Group: Read, World: Read). Lakukan hal yang sama untuk `install.php` dan folder `public_html/` (`0755`).
+- Melalui Terminal cPanel (jika tersedia):
+  ```bash
+  chmod 755 /home/username/public_html
+  find /home/username/public_html -type d -exec chmod 755 {} +
+  find /home/username/public_html -type f -exec chmod 644 {} +
+  ```
+
+### 2. Pastikan File `.htaccess` Benar di `public_html`
+Pastikan file `.htaccess` di dalam `public_html/` adalah isi dari `public/.htaccess` (yang mengarahkan ke `index.php`), **BUKAN** file root `.htaccess` proyek:
+```apache
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+```
+*(Catatan: Jika server hosting menolak direktif `Options`, coba beri tanda pagar `# Options -MultiViews -Indexes`).*
+
+### 3. Nonaktifkan Sementara ModSecurity (WAF)
+Pada beberapa hosting, firewall **ModSecurity** memblokir request API:
+1. Di cPanel, cari menu **ModSecurity** (di bawah kategori *Security*).
+2. Nonaktifkan untuk domain Anda, lalu uji kembali web.
+
+### 4. Pastikan Versi PHP Aktif Mendukung
+1. Di cPanel, buka **Select PHP Version** atau **MultiPHP Manager**.
+2. Pastikan versi PHP yang dipilih adalah **PHP 8.2**, **8.3**, atau **8.4**.
+3. Pastikan ekstensi `pdo_mysql`, `mbstring`, `fileinfo`, `openssl`, `curl`, `zip`, `bcmath` aktif.

@@ -147,7 +147,12 @@ jobs:
           echo "5. Menyalin panduan DEPLOY.md ke root rilis..."
           cp DEPLOY.md "${STAGING_DIR}/DEPLOY.md"
 
-          echo "6. Mengompresi paket artefak rilis..."
+          echo "6. Normalisasi izin berkas & direktori standar LiteSpeed suEXEC cPanel (755 dir, 644 file)..."
+          find "${STAGING_DIR}" -type d -exec chmod 755 {} +
+          find "${STAGING_DIR}" -type f -exec chmod 644 {} +
+          chmod +x "${APP_DIR}/artisan"
+
+          echo "7. Mengompresi paket artefak rilis..."
           # Paket All-in-One (ekstrak di /home/user/ -> otomatis mengisi saptara/ dan public_html/)
           (cd "${STAGING_DIR}" && zip -r "${OUTPUT_DIR}/${RELEASE_NAME}.zip" ./)
           (cd "${STAGING_DIR}" && tar -czf "${OUTPUT_DIR}/${RELEASE_NAME}.tar.gz" ./)
