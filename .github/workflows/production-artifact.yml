@@ -99,10 +99,10 @@ jobs:
 
       - name: Package Production Artifact (Dual-Folder cPanel Ready)
         run: |
-          DIST_DIR="dist"
-          mkdir -p "${DIST_DIR}"
+          OUTPUT_DIR="$(pwd)/dist"
+          mkdir -p "${OUTPUT_DIR}"
 
-          STAGING_DIR="${DIST_DIR}/${RELEASE_NAME}"
+          STAGING_DIR="${OUTPUT_DIR}/${RELEASE_NAME}"
           APP_DIR="${STAGING_DIR}/saptara"
           PUBLIC_DIR="${STAGING_DIR}/public_html"
 
@@ -149,15 +149,15 @@ jobs:
 
           echo "6. Mengompresi paket artefak rilis..."
           # Paket All-in-One (ekstrak di /home/user/ -> otomatis mengisi saptara/ dan public_html/)
-          (cd "${STAGING_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}.zip" ./)
-          (cd "${STAGING_DIR}" && tar -czf "../../${DIST_DIR}/${RELEASE_NAME}.tar.gz" ./)
+          (cd "${STAGING_DIR}" && zip -r "${OUTPUT_DIR}/${RELEASE_NAME}.zip" ./)
+          (cd "${STAGING_DIR}" && tar -czf "${OUTPUT_DIR}/${RELEASE_NAME}.tar.gz" ./)
 
           # Paket terpisah (untuk update parsial)
-          (cd "${APP_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}-app-saptara.zip" ./)
-          (cd "${PUBLIC_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}-public_html.zip" ./)
+          (cd "${APP_DIR}" && zip -r "${OUTPUT_DIR}/${RELEASE_NAME}-app-saptara.zip" ./)
+          (cd "${PUBLIC_DIR}" && zip -r "${OUTPUT_DIR}/${RELEASE_NAME}-public_html.zip" ./)
 
           echo "Ukuran artefak produksi yang berhasil dibuat:"
-          ls -lh dist/*.zip dist/*.tar.gz
+          ls -lh "${OUTPUT_DIR}"/*.zip "${OUTPUT_DIR}"/*.tar.gz
 
       - name: Upload Production Artifact (.zip All-in-One)
         uses: actions/upload-artifact@v4
