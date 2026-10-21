@@ -28,9 +28,11 @@ register_shutdown_function(function () {
     }
 });
 
-// Temukan direktori utama Laravel
+// Temukan direktori utama Laravel (mendukung struktur ../saptara atau ../)
 $possiblePaths = [
+    __DIR__.'/../saptara/',
     __DIR__.'/../',
+    __DIR__.'/../../saptara/',
     __DIR__.'/../../saptara-laravel/',
     __DIR__.'/../saptara-laravel/',
 ];
@@ -47,7 +49,7 @@ if (! $baseDir) {
     exit("<div style='background:#7f1d1d;color:#fecaca;padding:24px;font-family:sans-serif;border-radius:12px;max-width:600px;margin:40px auto;'>
         <h2 style='margin-top:0;'>❌ Folder Inti Laravel Tidak Ditemukan</h2>
         <p>File <code>vendor/autoload.php</code> atau <code>bootstrap/app.php</code> tidak dapat ditemukan.</p>
-        <p>Pastikan seluruh folder hasil ekstrak zip (app, bootstrap, vendor, dll) berada di lokasi yang sesuai.</p>
+        <p>Pastikan seluruh folder hasil ekstrak zip (app, bootstrap, vendor, dll) berada di lokasi yang sesuai (misal: <code>/home/saptarai/saptara/</code>).</p>
     </div>");
 }
 
@@ -98,10 +100,12 @@ if (! isset($_GET['run']) || $_GET['run'] !== 'saptara_install') {
     <div class="card">
         <h1>🚀 SAPTARA Web Installer (Zero-Shell cPanel)</h1>
         <p>Alat bantu konfigurasi dan migrasi database otomatis untuk shared hosting tanpa akses terminal/SSH.</p>
-        
+
         <div class="checklist">
             <strong>Pemeriksaan Awal Server:</strong>
             <ul>
+                <li>Direktori App: <code><?= htmlspecialchars($baseDir) ?></code></li>
+                <li>Direktori Web: <code><?= htmlspecialchars(__DIR__) ?></code></li>
                 <li>PHP Version: <code><?= phpversion() ?></code> <?= version_compare(phpversion(), '8.3.0', '>=') ? '<span class="badge badge-ok">OK (PHP 8.3+)</span>' : '<span class="badge badge-warn">Perlu PHP 8.3/8.4</span>' ?></li>
                 <li>Ekstensi PDO MySQL: <?= extension_loaded('pdo_mysql') ? '<span class="badge badge-ok">Aktif</span>' : '<span class="badge badge-warn">Belum Aktif</span>' ?></li>
                 <li>File Konfigurasi <code>.env</code>: <?= $hasEnv ? '<span class="badge badge-ok">Ditemukan</span>' : '<span class="badge badge-warn">Belum Dibuat</span>' ?></li>
@@ -111,7 +115,7 @@ if (! isset($_GET['run']) || $_GET['run'] !== 'saptara_install') {
         <?php if (! $hasEnv) { ?>
             <div class="warning" style="background:#4c0519; border-color:#9f1239; color:#fecdd3; margin-bottom: 20px;">
                 ⚠️ <strong>File <code>.env</code> belum dibuat!</strong><br>
-                Di cPanel File Manager, salin/rename file <code>.env.cpanel.example</code> menjadi <code>.env</code>, lalu isi nama database, username, dan password MySQL Anda.
+                Di folder <code><?= htmlspecialchars($baseDir) ?></code> cPanel File Manager, salin/rename file <code>.env.cpanel.example</code> menjadi <code>.env</code>, lalu isi nama database, username, dan password MySQL Anda.
             </div>
         <?php } ?>
 
@@ -122,7 +126,7 @@ if (! isset($_GET['run']) || $_GET['run'] !== 'saptara_install') {
         </div>
 
         <div class="warning">
-            ⚠️ <strong>Catatan:</strong> Setelah website berhasil diakses, segera <strong>HAPUS</strong> file <code>install.php</code> ini melalui File Manager cPanel Anda.
+            ⚠️ <strong>Catatan:</strong> Setelah website berhasil diakses, segera <strong>HAPUS</strong> file <code>install.php</code> ini melalui File Manager cPanel Anda demi keamanan server.
         </div>
     </div>
 </body>
@@ -256,6 +260,18 @@ try {
     echo $kernel->output()."\n";
 } catch (Throwable $storageErr) {
     echo '   (Catatan: '.$storageErr->getMessage().")\n\n";
+}
+
+// Fallback jika storage:link belum membuat symlink di public directory yang aktif
+$publicStoragePath = $app->publicPath().'/storage';
+$targetStoragePath = $baseDir.'storage/app/public';
+if (! file_exists($publicStoragePath) && is_dir($targetStoragePath)) {
+    if (function_exists('symlink')) {
+        @symlink($targetStoragePath, $publicStoragePath);
+        if (file_exists($publicStoragePath)) {
+            echo "   ✅ Symlink storage publik berhasil dibuat ke: {$publicStoragePath}\n\n";
+        }
+    }
 }
 
 // LANGKAH 6: Bersihkan Cache

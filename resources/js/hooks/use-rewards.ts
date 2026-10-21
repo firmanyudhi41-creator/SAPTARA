@@ -6,6 +6,7 @@ export const rewardKeys = {
   badges: (studentId: number) => ["rewards", "badges", studentId] as const,
   accessories: ["rewards", "accessories"] as const,
   studentAccessories: (studentId: number) => ["rewards", "studentAccessories", studentId] as const,
+  messages: (studentId: number) => ["rewards", "messages", studentId] as const,
 };
 
 export function useStudentBadges(studentId: number) {
@@ -27,6 +28,14 @@ export function useStudentAccessories(studentId: number) {
   return useQuery({
     queryKey: rewardKeys.studentAccessories(studentId),
     queryFn: () => rewardService.getStudentAccessories(studentId),
+    enabled: !!studentId,
+  });
+}
+
+export function useStudentMessages(studentId: number) {
+  return useQuery({
+    queryKey: rewardKeys.messages(studentId),
+    queryFn: () => rewardService.getStudentMessages(studentId),
     enabled: !!studentId,
   });
 }
@@ -54,8 +63,14 @@ export function useAwardBadge() {
 }
 
 export function useSendBottleMessage() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ studentId, comment, sticker }: { studentId: number; comment: string; sticker?: string }) =>
       rewardService.sendBottleMessage(studentId, comment, sticker),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: rewardKeys.messages(variables.studentId) });
+      queryClient.invalidateQueries({ queryKey: ["logbook", "student", variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: studentKeys.dashboard(variables.studentId) });
+    },
   });
 }

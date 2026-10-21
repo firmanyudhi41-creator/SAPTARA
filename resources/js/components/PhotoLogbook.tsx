@@ -402,30 +402,44 @@ export function PhotoLogbook({ studentId }: PhotoLogbookProps) {
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xl">{entry.habitIcon || "⭐"}</span>
-                      <span className="font-bold text-xs text-slate-800">{entry.habitName}</span>
+                      <span className="text-xl">
+                        {entry.caption === "Pesan dari Guru" ? "🍾" : (entry.habitIcon || "⭐")}
+                      </span>
+                      <span className="font-bold text-xs text-slate-800">
+                        {entry.caption === "Pesan dari Guru" ? "Surat & Pesan Botol Guru" : entry.habitName}
+                      </span>
                     </div>
                     {/* Status Badge */}
-                    {entry.status === "verified" && (
-                      <Badge variant="success" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Terverifikasi
+                    {entry.caption === "Pesan dari Guru" ? (
+                      <Badge variant="gold" className="gap-1">
+                        <span>✉️ Pesan Botol</span>
                       </Badge>
-                    )}
-                    {entry.status === "pending" && (
-                      <Badge variant="warning" className="gap-1">
-                        <Clock className="h-3 w-3" /> Menunggu
-                      </Badge>
-                    )}
-                    {entry.status === "needs_revision" && (
-                      <Badge variant="danger" className="gap-1">
-                        <AlertCircle className="h-3 w-3" /> Perlu Perbaikan
-                      </Badge>
+                    ) : (
+                      <>
+                        {entry.status === "verified" && (
+                          <Badge variant="success" className="gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Terverifikasi
+                          </Badge>
+                        )}
+                        {entry.status === "pending" && (
+                          <Badge variant="warning" className="gap-1">
+                            <Clock className="h-3 w-3" /> Menunggu
+                          </Badge>
+                        )}
+                        {entry.status === "needs_revision" && (
+                          <Badge variant="danger" className="gap-1">
+                            <AlertCircle className="h-3 w-3" /> Perlu Perbaikan
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-2.5 rounded-xl italic">
-                    "{entry.caption}"
-                  </p>
+                  {entry.caption !== "Pesan dari Guru" && (
+                    <p className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-2.5 rounded-xl italic">
+                      "{entry.caption}"
+                    </p>
+                  )}
 
                   {/* Date and time */}
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
