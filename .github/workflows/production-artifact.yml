@@ -50,6 +50,7 @@ jobs:
           CLEAN_TAG=$(echo "$TAG_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g')
           echo "RELEASE_NAME=saptara-production-${CLEAN_TAG}" >> $GITHUB_ENV
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "CLEAN_TAG=${CLEAN_TAG}" >> $GITHUB_ENV
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -71,7 +72,7 @@ jobs:
         run: |
           echo "Mengompilasi aset aplikasi React menjadi bundle statis..."
           pnpm build
-          
+
           # Verifikasi file manifest dan aset statis hasil kompilasi
           if [ ! -f "public/build/manifest.json" ]; then
             echo "❌ Error: File public/build/manifest.json tidak ditemukan setelah proses build!"
@@ -92,63 +93,89 @@ jobs:
           echo "Mengunduh dan mengoptimasi dependensi PHP untuk produksi..."
           composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-      - name: Package Production Artifact (Zero-Shell Ready)
+      - name: Package Production Artifact (Dual-Folder cPanel Ready)
         run: |
-          STAGING_DIR="dist/${RELEASE_NAME}"
-          mkdir -p "${STAGING_DIR}"
+          DIST_DIR="dist"
+          mkdir -p "${DIST_DIR}"
 
-          echo "1. Menyalin direktori aplikasi utama..."
-          cp -r app bootstrap config database public resources routes artisan composer.json composer.lock .env.example .env.cpanel.example DEPLOY.md "${STAGING_DIR}/"
-          cp -r vendor "${STAGING_DIR}/"
+          STAGING_DIR="${DIST_DIR}/${RELEASE_NAME}"
+          APP_DIR="${STAGING_DIR}/saptara"
+          PUBLIC_DIR="${STAGING_DIR}/public_html"
 
-          # Salin root .htaccess jika ada
-          if [ -f ".htaccess" ]; then
-            cp .htaccess "${STAGING_DIR}/.htaccess"
+          mkdir -p "${APP_DIR}" "${PUBLIC_DIR}"
+
+          echo "1. Menyalin direktori aplikasi Laravel ke ${APP_DIR}..."
+          cp -r app bootstrap config database resources routes artisan composer.json composer.lock .env.example .env.cpanel.example DEPLOY.md "${APP_DIR}/"
+          cp -r vendor "${APP_DIR}/"
+
+          # Siapkan placeholder folder public di dalam saptara
+          mkdir -p "${APP_DIR}/public"
+          touch "${APP_DIR}/public/.gitkeep"
+
+          echo "2. Menyalin direktori web root ke ${PUBLIC_DIR}..."
+          cp -r public/* "${PUBLIC_DIR}/"
+          if [ -f "public/.htaccess" ]; then
+            cp public/.htaccess "${PUBLIC_DIR}/.htaccess"
           fi
 
-          # Pastikan file hot (HMR dev mode) tidak terikut agar server selalu membaca aset statis
-          rm -f "${STAGING_DIR}/public/hot"
+          # Pastikan file dev HMR tidak terikut
+          rm -f "${PUBLIC_DIR}/hot" "${APP_DIR}/public/hot"
 
-          echo "2. Generate random APP_KEY untuk kemudahan deploy di cPanel..."
+          echo "3. Generate random APP_KEY untuk konfigurasi cPanel..."
           GENERATED_KEY=$(php -r "echo 'base64:' . base64_encode(random_bytes(32));")
-          sed -i "s|APP_KEY=.*|APP_KEY=${GENERATED_KEY}|g" "${STAGING_DIR}/.env.cpanel.example"
+          sed -i "s|APP_KEY=.*|APP_KEY=${GENERATED_KEY}|g" "${APP_DIR}/.env.cpanel.example"
 
-          echo "3. Menyiapkan struktur direktori storage yang bersih..."
-          mkdir -p "${STAGING_DIR}/storage/app/public"
-          mkdir -p "${STAGING_DIR}/storage/framework/cache/data"
-          mkdir -p "${STAGING_DIR}/storage/framework/sessions"
-          mkdir -p "${STAGING_DIR}/storage/framework/views"
-          mkdir -p "${STAGING_DIR}/storage/logs"
+          echo "4. Menyiapkan struktur direktori storage yang bersih..."
+          mkdir -p "${APP_DIR}/storage/app/public"
+          mkdir -p "${APP_DIR}/storage/framework/cache/data"
+          mkdir -p "${APP_DIR}/storage/framework/sessions"
+          mkdir -p "${APP_DIR}/storage/framework/views"
+          mkdir -p "${APP_DIR}/storage/logs"
 
-          touch "${STAGING_DIR}/storage/logs/.gitignore"
-          touch "${STAGING_DIR}/storage/framework/cache/.gitignore"
-          touch "${STAGING_DIR}/storage/framework/sessions/.gitignore"
-          touch "${STAGING_DIR}/storage/framework/views/.gitignore"
+          touch "${APP_DIR}/storage/logs/.gitignore"
+          touch "${APP_DIR}/storage/framework/cache/.gitignore"
+          touch "${APP_DIR}/storage/framework/sessions/.gitignore"
+          touch "${APP_DIR}/storage/framework/views/.gitignore"
 
-          # Bersihkan cache file sisa proses build lokal
-          rm -f "${STAGING_DIR}/bootstrap/cache/"*.php
+          # Bersihkan cache file sisa build lokal
+          rm -f "${APP_DIR}/bootstrap/cache/"*.php
 
-          echo "4. Mengompresi paket produksi ke format .zip dan .tar.gz..."
-          cd dist
-          zip -r "${RELEASE_NAME}.zip" "${RELEASE_NAME}"
-          tar -czf "${RELEASE_NAME}.tar.gz" "${RELEASE_NAME}"
-          cd ..
+          echo "5. Menyalin panduan DEPLOY.md ke root rilis..."
+          cp DEPLOY.md "${STAGING_DIR}/DEPLOY.md"
 
-          echo "Ukuran artefak produksi yang siap di-deploy tanpa Node/Shell:"
-          ls -lh dist/${RELEASE_NAME}.*
+          echo "6. Mengompresi paket artefak rilis..."
+          # Paket All-in-One (ekstrak di /home/user/ -> otomatis mengisi saptara/ dan public_html/)
+          (cd "${STAGING_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}.zip" ./)
+          (cd "${STAGING_DIR}" && tar -czf "../../${DIST_DIR}/${RELEASE_NAME}.tar.gz" ./)
 
-      - name: Upload Production Artifact (.zip)
+          # Paket terpisah (untuk update parsial)
+          (cd "${APP_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}-app-saptara.zip" ./)
+          (cd "${PUBLIC_DIR}" && zip -r "../../${DIST_DIR}/${RELEASE_NAME}-public_html.zip" ./)
+
+          echo "Ukuran artefak produksi yang berhasil dibuat:"
+          ls -lh dist/*.zip dist/*.tar.gz
+
+      - name: Upload Production Artifact (.zip All-in-One)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.RELEASE_NAME }}-zip
+          name: ${{ env.RELEASE_NAME }}-cpanel-all-in-one-zip
           path: dist/${{ env.RELEASE_NAME }}.zip
           retention-days: 90
 
-      - name: Upload Production Artifact (.tar.gz)
+      - name: Upload Production Artifact (.tar.gz All-in-One)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.RELEASE_NAME }}-tar-gz
+          name: ${{ env.RELEASE_NAME }}-cpanel-all-in-one-tar-gz
           path: dist/${{ env.RELEASE_NAME }}.tar.gz
+          retention-days: 90
+
+      - name: Upload Individual App & Public Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_NAME }}-split-packages
+          path: |
+            dist/*-app-saptara.zip
+            dist/*-public_html.zip
           retention-days: 90
 
       - name: Create or Update GitHub Release
@@ -158,6 +185,8 @@ jobs:
           files: |
             dist/${{ env.RELEASE_NAME }}.zip
             dist/${{ env.RELEASE_NAME }}.tar.gz
+            dist/${{ env.RELEASE_NAME }}-app-saptara.zip
+            dist/${{ env.RELEASE_NAME }}-public_html.zip
           name: Release ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
