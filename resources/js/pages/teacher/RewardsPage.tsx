@@ -6,7 +6,7 @@ import { useAwardBadge, useSendBottleMessage } from "../../hooks/use-rewards";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
-import { Award, Send, Sparkles, CheckCircle2 } from "lucide-react";
+import { Award, Send, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export function RewardsPage() {
@@ -30,12 +30,14 @@ export function RewardsPage() {
   const [badgeStudentId, setBadgeStudentId] = useState<number | null>(null);
   const [badgeHabitId, setBadgeHabitId] = useState<number | null>(null);
   const [badgeSuccess, setBadgeSuccess] = useState(false);
+  const [badgeError, setBadgeError] = useState<string | null>(null);
 
   // Message State
   const [messageStudentId, setMessageStudentId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
   const [messageSticker, setMessageSticker] = useState("⭐");
   const [messageSuccess, setMessageSuccess] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (students && students.length > 0) {
@@ -51,13 +53,14 @@ export function RewardsPage() {
     e.preventDefault();
     if (!badgeStudentId || !badgeHabitId) return;
 
+    setBadgeError(null);
     try {
       await awardBadgeMutation.mutateAsync({ studentId: badgeStudentId, habitId: badgeHabitId });
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
       setBadgeSuccess(true);
-      setTimeout(() => setBadgeSuccess(false), 3000);
-    } catch {
-      // ignore
+      setTimeout(() => setBadgeSuccess(false), 4000);
+    } catch (err: any) {
+      setBadgeError(err.message || "Gagal menyematkan piagam penghargaan.");
     }
   };
 
@@ -65,18 +68,19 @@ export function RewardsPage() {
     e.preventDefault();
     if (!messageStudentId || !messageText.trim()) return;
 
+    setMessageError(null);
     try {
       await sendMessageMutation.mutateAsync({
         studentId: messageStudentId,
-        comment: messageText,
+        comment: messageText.trim(),
         sticker: messageSticker,
       });
       confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
       setMessageSuccess(true);
       setMessageText("");
-      setTimeout(() => setMessageSuccess(false), 3000);
-    } catch {
-      // ignore
+      setTimeout(() => setMessageSuccess(false), 4000);
+    } catch (err: any) {
+      setMessageError(err.message || "Gagal menghanyutkan pesan botol ke siswa. Silakan coba lagi.");
     }
   };
 
@@ -127,8 +131,14 @@ export function RewardsPage() {
           <CardContent>
             {badgeSuccess && (
               <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>Piagam penghargaan berhasil disematkan ke profil siswa!</span>
+              </div>
+            )}
+            {badgeError && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{badgeError}</span>
               </div>
             )}
 
@@ -174,7 +184,7 @@ export function RewardsPage() {
                 className="w-full text-xs font-bold"
               >
                 <Sparkles className="h-4 w-4" />
-                <span>Sematkan Piagam Penghargaan</span>
+                <span>{awardBadgeMutation.isPending ? "Menyematkan..." : "Sematkan Piagam Penghargaan"}</span>
               </Button>
             </form>
           </CardContent>
@@ -194,8 +204,14 @@ export function RewardsPage() {
           <CardContent>
             {messageSuccess && (
               <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Pesan dalam botol berhasil dihanyutkan ke kapal siswa!</span>
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>Pesan dalam botol berhasil dihanyutkan ke kapal siswa! (+10 XP)</span>
+              </div>
+            )}
+            {messageError && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-semibold text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{messageError}</span>
               </div>
             )}
 
@@ -248,6 +264,7 @@ export function RewardsPage() {
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Tuliskan kata-kata penyemangat untuk siswa..."
                   rows={3}
+                  required
                   className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               </div>
@@ -259,7 +276,7 @@ export function RewardsPage() {
                 className="w-full text-xs font-bold"
               >
                 <Send className="h-4 w-4" />
-                <span>Hanyutkan Pesan Botol 🌊</span>
+                <span>{sendMessageMutation.isPending ? "Menghanyutkan Botol..." : "Hanyutkan Pesan Botol 🌊"}</span>
               </Button>
             </form>
           </CardContent>

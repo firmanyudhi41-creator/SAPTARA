@@ -1,5 +1,5 @@
 import { apiFetch } from "../lib/api-client";
-import type { StudentBadge, StudentAccessory } from "../types";
+import type { StudentBadge, StudentAccessory, BottleMessage } from "../types";
 
 export const rewardService = {
   async getBadges(studentId: number): Promise<StudentBadge[]> {
@@ -26,6 +26,10 @@ export const rewardService = {
       method: "POST",
       body: JSON.stringify({ accessoryId }),
     });
+  },
+
+  async getStudentMessages(studentId: number): Promise<BottleMessage[]> {
+    return apiFetch<BottleMessage[]>(`/api/rewards/messages/${studentId}`);
   },
 
   async sendBottleMessage(studentId: number, comment: string, sticker?: string): Promise<any> {

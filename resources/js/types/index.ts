@@ -314,3 +314,13 @@ export interface StudentAccessory {
   type: string;
   owned: boolean;
 }
+
+export interface BottleMessage {
+  id: number;
+  comment: string;
+  sticker: string;
+  teacherName: string;
+  date: string;
+  time: string;
+  createdAt: string;
+}

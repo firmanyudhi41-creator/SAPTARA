@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useStudentInfo } from "../../hooks/use-auth";
 import { useStudentDashboard } from "../../hooks/use-students";
-import { useAccessories, useStudentAccessories, usePurchaseAccessory, useStudentBadges } from "../../hooks/use-rewards";
+import { useAccessories, useStudentAccessories, usePurchaseAccessory, useStudentBadges, useStudentMessages } from "../../hooks/use-rewards";
 import { ShipEvolution } from "../../components/ShipEvolution";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
-import { Coins, ShoppingBag, Award, Sparkles, AlertCircle } from "lucide-react";
+import { Coins, ShoppingBag, Award, Sparkles, AlertCircle, Mail, MessageSquare } from "lucide-react";
+import { formatDateIndo } from "../../lib/utils";
 import confetti from "canvas-confetti";
 
 export function ShipPage() {
@@ -16,6 +17,7 @@ export function ShipPage() {
   const { data: storeAccessories, isLoading: storeLoading } = useAccessories();
   const { data: ownedAccessories } = useStudentAccessories(studentId);
   const { data: badges } = useStudentBadges(studentId);
+  const { data: messages } = useStudentMessages(studentId);
 
   const purchaseMutation = usePurchaseAccessory(studentId);
   const [purchaseMsg, setPurchaseMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -57,6 +59,69 @@ export function ShipPage() {
 
       {/* Ship Evolution view */}
       <ShipEvolution studentId={studentId} />
+
+      {/* Pesan dalam Botol / Surat Motivasi dari Guru */}
+      <Card className="border-sky-200/80 bg-gradient-to-r from-sky-50/50 via-white to-blue-50/30 shadow-xs">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🍾</span>
+              <div>
+                <CardTitle className="text-base text-sky-950 flex items-center gap-2">
+                  <span>Pesan Botol di Dek Kapal</span>
+                  {messages && messages.length > 0 && (
+                    <span className="text-[10px] font-bold bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full border border-sky-200">
+                      {messages.length} Surat Terdampar
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>Surat motivasi dan apresiasi rahasia dari Bapak/Ibu Guru yang terdampar di kapalmu</CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!messages || messages.length === 0 ? (
+            <div className="text-center py-6 px-4 rounded-2xl bg-slate-50/60 border border-dashed border-slate-200">
+              <span className="text-3xl block mb-1">🌊</span>
+              <p className="font-bold text-xs text-slate-700">Belum ada pesan botol yang terdampar</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Rajinlah menjalankan kebiasaan baik dan mencatat jurnal foto agar Gurumu mengirimkan surat apresiasi!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className="rounded-2xl border border-sky-200/80 bg-white p-4 shadow-xs hover:border-sky-300 transition-all space-y-2 relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center text-lg shrink-0">
+                        {msg.sticker || "⭐"}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{msg.teacherName || "Guru Pembina"}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {formatDateIndo(msg.date)} {msg.time ? `• ${msg.time} WIB` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      +10 XP Didapat
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-700 bg-sky-50/60 p-3 rounded-xl italic border border-sky-100/80 leading-relaxed">
+                    "{msg.comment}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Badges / Piagam Penghargaan */}
       <Card className="border-amber-200/80 bg-gradient-to-r from-amber-50/40 via-white to-amber-50/30">

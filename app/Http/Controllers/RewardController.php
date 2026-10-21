@@ -151,6 +151,29 @@ class RewardController extends Controller
         return response()->json(array_merge($purchased->toArray(), ['accessory' => $acc]), 201);
     }
 
+    /** GET /api/rewards/messages/{studentId} — Ambil riwayat pesan botol siswa */
+    public function studentMessages(int $studentId)
+    {
+        $messages = LogbookEntry::with('reviewedBy.user')
+            ->where('student_id', $studentId)
+            ->where('caption', 'Pesan dari Guru')
+            ->latest()
+            ->get()
+            ->map(fn ($entry) => [
+                'id' => $entry->id,
+                'comment' => $entry->teacher_comment,
+                'sticker' => $entry->teacher_sticker ?? '⭐',
+                'teacher_name' => $entry->reviewedBy?->display_name ?: ($entry->reviewedBy?->user?->name ?: 'Guru Pembina'),
+                'teacherName' => $entry->reviewedBy?->display_name ?: ($entry->reviewedBy?->user?->name ?: 'Guru Pembina'),
+                'date' => $entry->date?->toDateString() ?: (string) $entry->date,
+                'time' => $entry->time ? substr($entry->time, 0, 5) : '',
+                'created_at' => $entry->created_at?->toISOString() ?: (string) $entry->created_at,
+                'createdAt' => $entry->created_at?->toISOString() ?: (string) $entry->created_at,
+            ]);
+
+        return response()->json($messages);
+    }
+
     /** POST /api/rewards/message — Guru kirim pesan botol ke siswa */
     public function sendMessage(Request $request)
     {
@@ -166,21 +189,31 @@ class RewardController extends Controller
 
         $now = Carbon::now('Asia/Jakarta');
 
+        // Pastikan menggunakan habit_id yang benar-benar ada di database agar tidak melanggar foreign key constraint
+        $habit = Habit::first();
+        $habitId = $habit ? $habit->id : 1;
+
+        $teacherId = $request->_teacher?->id;
+
         $entry = LogbookEntry::create([
             'student_id' => $request->student_id,
-            'habit_id' => 1,
+            'habit_id' => $habitId,
             'date' => $now->toDateString(),
             'time' => $now->toTimeString(),
             'caption' => 'Pesan dari Guru',
             'status' => 'verified',
-            'reviewed_by_teacher_id' => $request->_teacher->id,
+            'reviewed_by_teacher_id' => $teacherId,
             'teacher_comment' => $request->comment,
-            'teacher_sticker' => $request->sticker ?? '🪙',
+            'teacher_sticker' => $request->sticker ?? '⭐',
             'xp_earned' => 10,
         ]);
 
         Student::where('id', $request->student_id)->increment('xp', 10);
 
-        return response()->json($entry);
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesan dalam botol berhasil dihanyutkan ke kapal siswa!',
+            'entry' => $entry,
+        ], 201);
     }
 }

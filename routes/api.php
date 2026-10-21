@@ -91,7 +91,7 @@ Route::middleware(['auth.student'])->group(function () {
     Route::post('/missions/{id}/claim', [ClassMissionController::class, 'claim']);
 });
 
-// ── Parent routes (JWT role=parent) ──────────────────────────
+// ── Parent routes (JWT role=parent) ───────────────────────────
 Route::middleware(['auth.parent'])->group(function () {
     Route::post('/logbook/{id}/parent-comment', [LogbookController::class, 'addParentComment']);
 });
@@ -118,6 +118,7 @@ Route::get('/students/{id}/heatmap', [StudentController::class, 'heatmap']);
 Route::get('/rewards/badges/{studentId}', [RewardController::class, 'badges']);
 Route::get('/rewards/accessories', [RewardController::class, 'accessories']);
 Route::get('/rewards/accessories/{studentId}', [RewardController::class, 'studentAccessories']);
+Route::get('/rewards/messages/{studentId}', [RewardController::class, 'studentMessages']);
 
 // ── Super Admin Routes ─────────────────────────────────────────
 Route::post('/admin/login', [AdminSchoolController::class, 'login']);
@@ -135,7 +136,7 @@ Route::middleware(['auth:sanctum', 'auth.admin'])->prefix('admin')->group(functi
     Route::post('/schools/{id}/admin-account', [AdminSchoolController::class, 'saveSchoolAdminAccount']);
 });
 
-// ── School Admin Routes ─────────────────────────────────────────
+// ── School Admin Routes ────────────────────────────────────────
 Route::post('/school-admin/login', [SchoolAdminAuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'auth.school_admin'])->prefix('school-admin')->group(function () {
